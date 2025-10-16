@@ -62,7 +62,12 @@ export default function ChatScreen() {
           `Erreur du serveur: ${err.response.data?.error || err.response.statusText}`
         );
       } else if (err.request) {
-        setError('Impossible de contacter le serveur. Vérifiez votre connexion.');
+        setError(
+          [
+            'Impossible de contacter le serveur.',
+            "Vérifiez votre connexion et que l'API Render est bien démarrée en ouvrant https://facilaide-plus-backend.onrender.com dans un navigateur.",
+          ].join(' ')
+        );
       } else {
         setError('Une erreur est survenue. Veuillez réessayer.');
       }

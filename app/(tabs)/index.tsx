@@ -15,123 +15,6 @@ import { Bot } from 'lucide-react-native';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
-import type {
-  ApiGenerateResponse,
-  ApiSimulationResponse,
-  AvailableBenefit,
-  SimulationResultPayload,
-} from '../types/simulation';
-
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-};
-
-const parseJsonSafely = (value: unknown): Record<string, unknown> | null => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  if (typeof value === 'string') {
-    try {
-      const parsed = JSON.parse(value);
-      return isRecord(parsed) ? parsed : null;
-    } catch (error) {
-      console.warn('Impossible de parser la chaîne JSON renvoyée par /generate-json', error);
-      return null;
-    }
-  }
-
-  return isRecord(value) ? value : null;
-};
-
-const extractRawJson = (data: unknown): Record<string, unknown> | null => {
-  const rootObject = parseJsonSafely(data);
-  if (rootObject && Object.keys(rootObject).length) {
-    return rootObject;
-  }
-
-  if (!isRecord(data)) {
-    return null;
-  }
-
-  if ('json' in data) {
-    return parseJsonSafely((data as ApiGenerateResponse).json ?? null);
-  }
-
-  return null;
-};
-
-const toNumber = (value: unknown): number | null => {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? value : null;
-  }
-
-  if (typeof value === 'string') {
-    const normalized = Number(value);
-    return Number.isFinite(normalized) ? normalized : null;
-  }
-
-  return null;
-};
-
-const normalizeAvailableBenefits = (value: unknown): AvailableBenefit[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((entry) => {
-      if (!isRecord(entry)) {
-        return null;
-      }
-
-      const { id, label, entity, period, amount } = entry as Record<string, unknown>;
-      const normalizedAmount = toNumber(amount);
-
-      if (
-        typeof id === 'string' &&
-        typeof label === 'string' &&
-        typeof entity === 'string' &&
-        typeof period === 'string' &&
-        normalizedAmount !== null
-      ) {
-        return {
-          id,
-          label,
-          entity,
-          period,
-          amount: normalizedAmount,
-        } as AvailableBenefit;
-      }
-
-      return null;
-    })
-    .filter((benefit): benefit is AvailableBenefit => benefit !== null);
-};
-
-const buildSimulationPayload = (
-  apiResponse: ApiSimulationResponse,
-  rawJson: Record<string, unknown>
-): SimulationResultPayload => {
-  const explanation =
-    typeof apiResponse.explanation === 'string' && apiResponse.explanation.trim().length
-      ? apiResponse.explanation.trim()
-      : null;
-
-  return {
-    availableBenefits: normalizeAvailableBenefits(apiResponse.availableBenefits),
-    explanation,
-    payload: isRecord(apiResponse.payload) || Array.isArray(apiResponse.payload)
-      ? apiResponse.payload
-      : apiResponse.payload ?? null,
-    result: isRecord(apiResponse.result) || Array.isArray(apiResponse.result)
-      ? apiResponse.result
-      : apiResponse.result ?? null,
-    rawJson,
-    generatedAt: new Date().toISOString(),
-  };
-};
-
 export default function ChatScreen() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -186,7 +69,7 @@ export default function ChatScreen() {
 
       const simulateResponse = await axios.post(
         simulateEndpoint,
-        { rawJson },
+        { payload: openFiscaPayload },
         {
           headers: { 'Content-Type': 'application/json' },
           timeout: 45000,
@@ -217,15 +100,21 @@ export default function ChatScreen() {
       });
     } catch (err: unknown) {
       console.error('Error during simulation:', err);
-
-      if (typeof err === 'object' && err !== null && 'isUserFacing' in err) {
-        const maybeMessage = (err as { message?: unknown }).message;
-        const messageText =
-          typeof maybeMessage === 'string'
-            ? maybeMessage
-            : 'Une erreur est survenue pendant la génération de la simulation.';
-        setError(messageText);
-        return;
+      if (err.code === 'ECONNABORTED') {
+        setError('La requête a pris trop de temps. Veuillez réessayer.');
+      } else if (err.response) {
+        setError(
+          `Erreur du serveur: ${err.response.data?.error || err.response.statusText}`
+        );
+      } else if (err.request) {
+        setError(
+          [
+            'Impossible de contacter le serveur.',
+            "Vérifiez votre connexion et que l'API Render est bien démarrée en ouvrant https://facilaide-plus-backend.onrender.com dans un navigateur.",
+          ].join(' ')
+        );
+      } else {
+        setError('Une erreur est survenue. Veuillez réessayer.');
       }
 
       if (axios.isAxiosError(err)) {

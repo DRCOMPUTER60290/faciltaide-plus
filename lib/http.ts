@@ -60,6 +60,7 @@ export async function postJson<T>(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
+    console.log('Appel API vers :', url, 'Payload :', body);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -71,6 +72,8 @@ export async function postJson<T>(
     });
 
     const rawText = await response.text();
+
+    console.log('Réponse API depuis :', url, 'Payload :', rawText);
 
     if (!response.ok) {
       throw new HttpError(response.status, response.statusText, rawText, response);

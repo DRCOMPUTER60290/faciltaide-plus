@@ -35,8 +35,8 @@ export default function ChatScreen() {
 
     return {
       baseUrl: normalizedBaseUrl,
-      generateEndpoint: `${normalizedBaseUrl}/api/generate-json/`,
-      simulateEndpoint: `${normalizedBaseUrl}/api/simulate/`,
+      generateEndpoint: `${normalizedBaseUrl}/api/generate-json`,
+      simulateEndpoint: `${normalizedBaseUrl}/api/simulate`,
     } as const;
   }, []);
 
@@ -74,7 +74,7 @@ export default function ChatScreen() {
 
       const simulateResponse = await axios.post(
         simulateEndpoint,
-        { payload: openFiscaPayload },
+        openFiscaPayload,
         {
           headers: { 'Content-Type': 'application/json' },
           timeout: 45000,

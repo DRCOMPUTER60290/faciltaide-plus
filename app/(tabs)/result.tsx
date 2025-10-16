@@ -10,7 +10,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { CheckCircle2, ArrowLeft, Euro } from 'lucide-react-native';
 
-import type { AvailableBenefit, SimulationResultPayload } from '../../types/simulation';
+import type { AvailableBenefit, SimulationResultPayload } from '../types/simulation';
 
 const PERIOD_MONTH_REGEX = /^\d{4}-\d{2}$/;
 const PERIOD_YEAR_REGEX = /^\d{4}$/;

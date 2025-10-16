@@ -15,16 +15,6 @@ import { Bot } from 'lucide-react-native';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
-import {
-  buildSimulationPayload,
-  extractRawJson,
-  isRecord,
-} from '../../lib/simulation';
-import type {
-  ApiSimulationResponse,
-  SimulationResultPayload,
-} from '../../types/simulation';
-
 export default function ChatScreen() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -79,7 +69,7 @@ export default function ChatScreen() {
 
       const simulateResponse = await axios.post(
         simulateEndpoint,
-        { rawJson },
+        { payload: openFiscaPayload },
         {
           headers: { 'Content-Type': 'application/json' },
           timeout: 45000,
@@ -110,15 +100,21 @@ export default function ChatScreen() {
       });
     } catch (err: unknown) {
       console.error('Error during simulation:', err);
-
-      if (typeof err === 'object' && err !== null && 'isUserFacing' in err) {
-        const maybeMessage = (err as { message?: unknown }).message;
-        const messageText =
-          typeof maybeMessage === 'string'
-            ? maybeMessage
-            : 'Une erreur est survenue pendant la génération de la simulation.';
-        setError(messageText);
-        return;
+      if (err.code === 'ECONNABORTED') {
+        setError('La requête a pris trop de temps. Veuillez réessayer.');
+      } else if (err.response) {
+        setError(
+          `Erreur du serveur: ${err.response.data?.error || err.response.statusText}`
+        );
+      } else if (err.request) {
+        setError(
+          [
+            'Impossible de contacter le serveur.',
+            "Vérifiez votre connexion et que l'API Render est bien démarrée en ouvrant https://facilaide-plus-backend.onrender.com dans un navigateur.",
+          ].join(' ')
+        );
+      } else {
+        setError('Une erreur est survenue. Veuillez réessayer.');
       }
 
       if (axios.isAxiosError(err)) {

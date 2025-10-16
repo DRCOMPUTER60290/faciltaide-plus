@@ -57,7 +57,15 @@ export default function ChatScreen() {
         }
       );
 
-      const openFiscaPayload = generateResponse.data;
+      const rawJson = extractRawJson(generateResponse.data);
+
+      if (!rawJson) {
+        const parseError = new Error(
+          "La génération de la situation a échoué. Réessayez dans quelques instants."
+        );
+        (parseError as Error & { isUserFacing?: boolean }).isUserFacing = true;
+        throw parseError;
+      }
 
       const simulateResponse = await axios.post(
         simulateEndpoint,
@@ -69,11 +77,28 @@ export default function ChatScreen() {
         }
       );
 
+      const simulationPayload = buildSimulationPayload(
+        (simulateResponse.data ?? {}) as ApiSimulationResponse,
+        rawJson
+      );
+
+      let serializedResults = '';
+      try {
+        serializedResults = JSON.stringify(simulationPayload);
+      } catch (serializationError) {
+        console.error('Erreur lors de la sérialisation des résultats:', serializationError);
+        const userError = new Error(
+          'La simulation a réussi mais les résultats sont trop volumineux pour être affichés.'
+        );
+        (userError as Error & { isUserFacing?: boolean }).isUserFacing = true;
+        throw userError;
+      }
+
       router.push({
         pathname: '/(tabs)/result',
-        params: { results: JSON.stringify(simulateResponse.data) },
+        params: { results: serializedResults },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error during simulation:', err);
       if (err.code === 'ECONNABORTED') {
         setError('La requête a pris trop de temps. Veuillez réessayer.');
@@ -91,6 +116,45 @@ export default function ChatScreen() {
       } else {
         setError('Une erreur est survenue. Veuillez réessayer.');
       }
+
+      if (axios.isAxiosError(err)) {
+        if (err.code === 'ECONNABORTED') {
+          setError('La requête a pris trop de temps. Veuillez réessayer.');
+          return;
+        }
+
+        if (err.response) {
+          const status = err.response.status;
+          const responseData = err.response.data;
+          const serverMessage = (() => {
+            if (typeof responseData === 'string' && responseData.trim().length) {
+              return responseData.trim();
+            }
+            if (isRecord(responseData) && typeof responseData.error === 'string') {
+              return responseData.error;
+            }
+            if (err.response.statusText && err.response.statusText.trim().length) {
+              return err.response.statusText.trim();
+            }
+            return `code ${status}`;
+          })();
+
+          setError(`Erreur du serveur (${status}) : ${serverMessage}`);
+          return;
+        }
+
+        if (err.request) {
+          setError(
+            [
+              'Impossible de contacter le serveur.',
+              "Vérifiez votre connexion et que l'API Render est bien démarrée en ouvrant https://facilaide-plus-backend.onrender.com dans un navigateur.",
+            ].join(' ')
+          );
+          return;
+        }
+      }
+
+      setError('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsLoading(false);
     }

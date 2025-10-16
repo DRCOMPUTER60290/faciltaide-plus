@@ -12,7 +12,6 @@ const bundleDir = path.join(
 );
 
 const bytecodeFile = path.join(bundleDir, 'InternalBytecode.js');
-const projectFallbackFile = path.join(__dirname, '..', 'InternalBytecode.js');
 
 try {
   if (!fs.existsSync(bundleDir)) {
@@ -35,13 +34,6 @@ try {
     ].join('\n');
 
     fs.writeFileSync(bytecodeFile, body, 'utf8');
-  }
-
-  if (!fs.existsSync(projectFallbackFile)) {
-    const fallbackBanner =
-      '// Auto-generated fallback placed at the project root for Metro on Windows.\n';
-    const fallbackContents = [fallbackBanner, 'module.exports = {};', ''].join('\n');
-    fs.writeFileSync(projectFallbackFile, fallbackContents, 'utf8');
   }
 } catch (error) {
   console.warn('[ensure-metro-bytecode] Unable to create Hermes bytecode stub:', error);

@@ -12,11 +12,17 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Bot } from 'lucide-react-native';
-import axios from 'axios';
 import Constants from 'expo-constants';
 
-import { buildSimulationPayload, extractRawJson, isRecord } from '@/lib/simulation';
+import { buildSimulationPayload, extractRawJson } from '@/lib/simulation';
 import type { ApiSimulationResponse } from '@/lib/simulation';
+import {
+  HttpError,
+  JsonParseError,
+  isAbortError,
+  isNetworkError,
+  postJson,
+} from '@/lib/http';
 
 export default function ChatScreen() {
   const [message, setMessage] = useState('');
@@ -50,17 +56,13 @@ export default function ChatScreen() {
     setError(null);
 
     try {
-      const generateResponse = await axios.post(
+      const generateResponse = await postJson<unknown>(
         generateEndpoint,
         { message: message.trim() },
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 45000,
-          transitional: { clarifyTimeoutError: true },
-        }
+        { timeoutMs: 45_000 }
       );
 
-      const rawJson = extractRawJson(generateResponse.data);
+      const rawJson = extractRawJson(generateResponse);
 
       if (!rawJson) {
         const parseError = new Error(
@@ -72,18 +74,14 @@ export default function ChatScreen() {
 
       const openFiscaPayload = { json: rawJson } as const;
 
-      const simulateResponse = await axios.post(
+      const simulateResponse = await postJson<ApiSimulationResponse>(
         simulateEndpoint,
         openFiscaPayload,
-        {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 45000,
-          transitional: { clarifyTimeoutError: true },
-        }
+        { timeoutMs: 45_000 }
       );
 
       const simulationPayload = buildSimulationPayload(
-        (simulateResponse.data ?? {}) as ApiSimulationResponse,
+        (simulateResponse ?? {}) as ApiSimulationResponse,
         rawJson
       );
 
@@ -106,41 +104,39 @@ export default function ChatScreen() {
     } catch (err: unknown) {
       console.error('Error during simulation:', err);
 
-      if (axios.isAxiosError(err)) {
-        if (err.code === 'ECONNABORTED') {
-          setError('La requête a pris trop de temps. Veuillez réessayer.');
-          return;
-        }
+      if (isAbortError(err)) {
+        setError('La requête a pris trop de temps. Veuillez réessayer.');
+        return;
+      }
 
-        if (err.response) {
-          const status = err.response.status;
-          const responseData = err.response.data;
-          const serverMessage = (() => {
-            if (typeof responseData === 'string' && responseData.trim().length) {
-              return responseData.trim();
-            }
-            if (isRecord(responseData) && typeof responseData.error === 'string') {
-              return responseData.error;
-            }
-            if (err.response.statusText && err.response.statusText.trim().length) {
-              return err.response.statusText.trim();
-            }
-            return `code ${status}`;
-          })();
+      if (isNetworkError(err)) {
+        setError(
+          [
+            'Impossible de contacter le serveur.',
+            "Vérifiez votre connexion et que l'API Render est bien démarrée en ouvrant https://facilaide-plus-backend.onrender.com dans un navigateur.",
+          ].join(' ')
+        );
+        return;
+      }
 
-          setError(`Erreur du serveur (${status}) : ${serverMessage}`);
-          return;
-        }
+      if (err instanceof HttpError) {
+        const serverMessage = (() => {
+          if (err.body && err.body.trim().length) {
+            return err.body.trim();
+          }
+          if (err.statusText && err.statusText.trim().length) {
+            return err.statusText.trim();
+          }
+          return `code ${err.status}`;
+        })();
 
-        if (err.request) {
-          setError(
-            [
-              'Impossible de contacter le serveur.',
-              "Vérifiez votre connexion et que l'API Render est bien démarrée en ouvrant https://facilaide-plus-backend.onrender.com dans un navigateur.",
-            ].join(' ')
-          );
-          return;
-        }
+        setError(`Erreur du serveur (${err.status}) : ${serverMessage}`);
+        return;
+      }
+
+      if (err instanceof JsonParseError) {
+        setError(err.message);
+        return;
       }
 
       if (err instanceof Error) {

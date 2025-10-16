@@ -70,7 +70,7 @@ export default function ChatScreen() {
         throw parseError;
       }
 
-      const openFiscaPayload = rawJson;
+      const openFiscaPayload = { json: rawJson } as const;
 
       const simulateResponse = await axios.post(
         simulateEndpoint,

@@ -56,10 +56,12 @@ export default function ChatScreen() {
     setError(null);
 
     try {
+      const requestTimeoutMs = 5 * 60 * 1000;
+
       const generateResponse = await postJson<unknown>(
         generateEndpoint,
         { message: message.trim() },
-        { timeoutMs: 45_000 }
+        { timeoutMs: requestTimeoutMs }
       );
 
       const rawJson = extractRawJson(generateResponse);
@@ -77,7 +79,7 @@ export default function ChatScreen() {
       const simulateResponse = await postJson<ApiSimulationResponse>(
         simulateEndpoint,
         openFiscaPayload,
-        { timeoutMs: 45_000 }
+        { timeoutMs: requestTimeoutMs }
       );
 
       const simulationPayload = buildSimulationPayload(

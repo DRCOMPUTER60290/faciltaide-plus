@@ -56,24 +56,41 @@ export async function postJson<T>(
   options: PostJsonOptions = {}
 ): Promise<T> {
   const { timeoutMs = 45_000, headers = {} } = options;
+  const effectiveTimeout = Math.min(timeoutMs, 5 * 60 * 1000);
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutId = setTimeout(() => controller.abort(), effectiveTimeout);
+
+  const requestHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...headers,
+  };
 
   try {
-    console.log('Appel API vers :', url, 'Payload :', body);
+    console.log('Appel API sortant :', {
+      method: 'POST',
+      url,
+      headers: requestHeaders,
+      body,
+      timeoutMs: effectiveTimeout,
+    });
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...headers,
-      },
+      headers: requestHeaders,
       body: JSON.stringify(body),
       signal: controller.signal,
     });
 
     const rawText = await response.text();
 
-    console.log('Réponse API depuis :', url, 'Payload :', rawText);
+    const responseHeaders = Object.fromEntries(response.headers.entries());
+
+    console.log('Réponse API entrante :', {
+      url,
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+      body: rawText,
+    });
 
     if (!response.ok) {
       throw new HttpError(response.status, response.statusText, rawText, response);

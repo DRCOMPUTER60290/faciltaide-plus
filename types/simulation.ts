@@ -19,6 +19,10 @@ export interface ApiGenerateResponse {
   json?: unknown;
 }
 
+export interface ApiSimulationRequest {
+  json: Record<string, unknown>;
+}
+
 export interface ApiSimulationResponse {
   availableBenefits?: unknown;
   explanation?: unknown;

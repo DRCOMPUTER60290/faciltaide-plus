@@ -1,5 +1,6 @@
 import type {
   ApiGenerateResponse,
+  ApiSimulationRequest,
   ApiSimulationResponse,
   AvailableBenefit,
   SimulationResultPayload,
@@ -90,7 +91,7 @@ export const normalizeAvailableBenefits = (value: unknown): AvailableBenefit[] =
 
 export const buildSimulationPayload = (
   apiResponse: ApiSimulationResponse,
-  rawJson: Record<string, unknown>
+  rawJson: ApiSimulationRequest['json']
 ): SimulationResultPayload => {
   const explanation =
     typeof apiResponse.explanation === 'string' && apiResponse.explanation.trim().length
@@ -113,6 +114,7 @@ export const buildSimulationPayload = (
 
 export type {
   ApiGenerateResponse,
+  ApiSimulationRequest,
   ApiSimulationResponse,
   AvailableBenefit,
   SimulationResultPayload,

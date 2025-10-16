@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,29 @@ import {
 import { router } from 'expo-router';
 import { Bot } from 'lucide-react-native';
 import axios from 'axios';
+import Constants from 'expo-constants';
 
 export default function ChatScreen() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { generateEndpoint, simulateEndpoint } = useMemo(() => {
+    const defaultBaseUrl = 'https://facilaide-plus-backend.onrender.com';
+    const configBaseUrl =
+      (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)
+        ?.apiBaseUrl ??
+      process.env.EXPO_PUBLIC_API_BASE_URL ??
+      defaultBaseUrl;
+
+    const normalizedBaseUrl = configBaseUrl.replace(/\/+$/, '');
+
+    return {
+      baseUrl: normalizedBaseUrl,
+      generateEndpoint: `${normalizedBaseUrl}/api/generate-json/`,
+      simulateEndpoint: `${normalizedBaseUrl}/api/simulate/`,
+    } as const;
+  }, []);
 
   const handleSimulate = async () => {
     if (!message.trim()) {
@@ -30,22 +48,24 @@ export default function ChatScreen() {
 
     try {
       const generateResponse = await axios.post(
-        'https://facilaide-plus-backend.onrender.com/api/generate-json',
+        generateEndpoint,
         { message: message.trim() },
         {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 30000,
+          timeout: 45000,
+          transitional: { clarifyTimeoutError: true },
         }
       );
 
       const openFiscaPayload = generateResponse.data;
 
       const simulateResponse = await axios.post(
-        'https://facilaide-plus-backend.onrender.com/api/simulate',
+        simulateEndpoint,
         { payload: openFiscaPayload },
         {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 30000,
+          timeout: 45000,
+          transitional: { clarifyTimeoutError: true },
         }
       );
 

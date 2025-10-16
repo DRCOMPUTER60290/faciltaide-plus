@@ -7,7 +7,10 @@
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build:web": "expo export --platform web",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --test test/simulation-flow.test.ts",
+    "fix:metro-bytecode": "node scripts/ensure-metro-bytecode.js",
+    "postinstall": "node scripts/ensure-metro-bytecode.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -46,6 +49,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.1.10",
+    "tsx": "^4.20.6",
     "typescript": "~5.9.2"
   }
 }

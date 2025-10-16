@@ -162,6 +162,52 @@ export default function ResultScreen() {
     router.push('/(tabs)/');
   };
 
+  const formattedTimestamp = useMemo(() => {
+    if (!results?.generatedAt) {
+      return null;
+    }
+    return formatTimestamp(results.generatedAt);
+  }, [results?.generatedAt]);
+
+  const benefitTotals = useMemo(() => {
+    if (!results) {
+      return { monthlyTotal: 0, yearlyTotal: 0, monthlyCount: 0, yearlyCount: 0 };
+    }
+
+    let monthlyTotal = 0;
+    let yearlyTotal = 0;
+    let monthlyCount = 0;
+    let yearlyCount = 0;
+
+    results.availableBenefits.forEach((benefit) => {
+      if (PERIOD_MONTH_REGEX.test(benefit.period)) {
+        monthlyTotal += benefit.amount;
+        monthlyCount += 1;
+        return;
+      }
+
+      if (PERIOD_YEAR_REGEX.test(benefit.period)) {
+        yearlyTotal += benefit.amount;
+        yearlyCount += 1;
+      }
+    });
+
+    return { monthlyTotal, yearlyTotal, monthlyCount, yearlyCount };
+  }, [results]);
+
+  const rawJsonString = useMemo(
+    () => safeStringify(results?.rawJson),
+    [results?.rawJson]
+  );
+  const payloadString = useMemo(
+    () => safeStringify(results?.payload),
+    [results?.payload]
+  );
+  const resultString = useMemo(
+    () => safeStringify(results?.result),
+    [results?.result]
+  );
+
   if (!results) {
     return (
       <View style={styles.container}>
@@ -183,46 +229,6 @@ export default function ResultScreen() {
       </View>
     );
   }
-
-  const formattedTimestamp = useMemo(
-    () => formatTimestamp(results.generatedAt),
-    [results.generatedAt]
-  );
-
-  const benefitTotals = useMemo(() => {
-    let monthlyTotal = 0;
-    let yearlyTotal = 0;
-    let monthlyCount = 0;
-    let yearlyCount = 0;
-
-    results.availableBenefits.forEach((benefit) => {
-      if (PERIOD_MONTH_REGEX.test(benefit.period)) {
-        monthlyTotal += benefit.amount;
-        monthlyCount += 1;
-        return;
-      }
-
-      if (PERIOD_YEAR_REGEX.test(benefit.period)) {
-        yearlyTotal += benefit.amount;
-        yearlyCount += 1;
-      }
-    });
-
-    return { monthlyTotal, yearlyTotal, monthlyCount, yearlyCount };
-  }, [results.availableBenefits]);
-
-  const rawJsonString = useMemo(
-    () => safeStringify(results.rawJson),
-    [results.rawJson]
-  );
-  const payloadString = useMemo(
-    () => safeStringify(results.payload),
-    [results.payload]
-  );
-  const resultString = useMemo(
-    () => safeStringify(results.result),
-    [results.result]
-  );
 
   return (
     <View style={styles.container}>

@@ -15,6 +15,9 @@ import { Bot } from 'lucide-react-native';
 import axios from 'axios';
 import Constants from 'expo-constants';
 
+import { buildSimulationPayload, extractRawJson, isRecord } from '@/lib/simulation';
+import type { ApiSimulationResponse } from '@/lib/simulation';
+
 export default function ChatScreen() {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -67,6 +70,8 @@ export default function ChatScreen() {
         throw parseError;
       }
 
+      const openFiscaPayload = rawJson;
+
       const simulateResponse = await axios.post(
         simulateEndpoint,
         { payload: openFiscaPayload },
@@ -100,22 +105,6 @@ export default function ChatScreen() {
       });
     } catch (err: unknown) {
       console.error('Error during simulation:', err);
-      if (err.code === 'ECONNABORTED') {
-        setError('La requête a pris trop de temps. Veuillez réessayer.');
-      } else if (err.response) {
-        setError(
-          `Erreur du serveur: ${err.response.data?.error || err.response.statusText}`
-        );
-      } else if (err.request) {
-        setError(
-          [
-            'Impossible de contacter le serveur.',
-            "Vérifiez votre connexion et que l'API Render est bien démarrée en ouvrant https://facilaide-plus-backend.onrender.com dans un navigateur.",
-          ].join(' ')
-        );
-      } else {
-        setError('Une erreur est survenue. Veuillez réessayer.');
-      }
 
       if (axios.isAxiosError(err)) {
         if (err.code === 'ECONNABORTED') {
@@ -152,6 +141,15 @@ export default function ChatScreen() {
           );
           return;
         }
+      }
+
+      if (err instanceof Error) {
+        if ((err as Error & { isUserFacing?: boolean }).isUserFacing) {
+          setError(err.message);
+        } else {
+          setError('Une erreur est survenue. Veuillez réessayer.');
+        }
+        return;
       }
 
       setError('Une erreur est survenue. Veuillez réessayer.');

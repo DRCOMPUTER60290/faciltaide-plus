@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Linking,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { CheckCircle2, ArrowLeft, Euro } from 'lucide-react-native';
@@ -169,6 +170,61 @@ export default function ResultScreen() {
     return formatTimestamp(results.generatedAt);
   }, [results?.generatedAt]);
 
+  const explanationSegments = useMemo(() => {
+    if (!results?.explanation) {
+      return [];
+    }
+
+    const trimmed = results.explanation.trim();
+    const multilineSegments = trimmed
+      .split(/\r?\n+/)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    if (multilineSegments.length > 1) {
+      return multilineSegments;
+    }
+
+    const sentenceSegments =
+      trimmed.match(/[^.!?]+[.!?]?/g)?.map((segment) => segment.trim()).filter(Boolean) ?? [];
+
+    return sentenceSegments.length ? sentenceSegments : [trimmed];
+  }, [results?.explanation]);
+
+  const hasCAFRelatedBenefit = useMemo(() => {
+    if (!results) {
+      return false;
+    }
+
+    const CAF_KEYWORDS = [
+      'caf',
+      "caisse d'allocations familiales",
+      'rsa',
+      'revenu de solidarité active',
+      'apl',
+      'aide personnalisée au logement',
+      'als',
+      'alf',
+      'prime d’activité',
+      'prime d activite',
+      'aah',
+      'paje',
+      'allocation familiale',
+      'allocations familiales',
+    ];
+
+    return results.availableBenefits.some((benefit) => {
+      const normalized = `${benefit.id} ${benefit.label}`.toLowerCase();
+      return CAF_KEYWORDS.some((keyword) => normalized.includes(keyword));
+    });
+  }, [results]);
+
+  const handleOpenCAF = useCallback(() => {
+    Linking.openURL('https://www.caf.fr/').catch((error) => {
+      console.warn('Impossible d\'ouvrir le site de la CAF', error);
+    });
+  }, []);
+
   const benefitTotals = useMemo(() => {
     if (!results) {
       return { monthlyTotal: 0, yearlyTotal: 0, monthlyCount: 0, yearlyCount: 0 };
@@ -253,11 +309,24 @@ export default function ResultScreen() {
           </View>
         )}
 
-        {results.explanation && (
+        {explanationSegments.length > 0 && (
           <View style={styles.explanationBox}>
             <Text style={styles.explanationTitle}>Résumé personnalisé</Text>
-            <Text style={styles.explanationText}>{results.explanation}</Text>
+            <View style={styles.explanationList}>
+              {explanationSegments.map((segment, index) => (
+                <View key={`${segment}-${index}`} style={styles.explanationItem}>
+                  <View style={styles.explanationBullet} />
+                  <Text style={styles.explanationText}>{segment}</Text>
+                </View>
+              ))}
+            </View>
           </View>
+        )}
+
+        {hasCAFRelatedBenefit && (
+          <TouchableOpacity style={styles.cafButton} onPress={handleOpenCAF}>
+            <Text style={styles.cafButtonText}>Accéder à mon espace CAF</Text>
+          </TouchableOpacity>
         )}
 
         <View style={styles.aidesSection}>
@@ -486,10 +555,46 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 8,
   },
+  explanationList: {
+    marginTop: 4,
+  },
+  explanationItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+  explanationBullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#4ba3c3',
+    marginTop: 8,
+    marginRight: 12,
+  },
   explanationText: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+    flex: 1,
+    fontSize: 15,
+    color: '#2c3e50',
+    lineHeight: 22,
+  },
+  cafButton: {
+    backgroundColor: '#0c6a8f',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    marginBottom: 24,
+    shadowColor: '#0c6a8f',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: Platform.OS === 'ios' ? 0.2 : 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  cafButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   aidesSection: {
     marginBottom: 20,

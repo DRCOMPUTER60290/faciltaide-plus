@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   Platform,
   Linking,
+  Share,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { CheckCircle2, ArrowLeft, Euro } from 'lucide-react-native';
+import { CheckCircle2, ArrowLeft, Euro, Share2, FileDown, LifeBuoy, ChevronDown } from 'lucide-react-native';
 
 import type { AvailableBenefit, SimulationResultPayload } from '@/types/simulation';
 
@@ -130,6 +131,7 @@ export default function ResultScreen() {
   const [showRawJson, setShowRawJson] = useState(false);
   const [showPayload, setShowPayload] = useState(false);
   const [showResultData, setShowResultData] = useState(false);
+  const [isSupportMode, setIsSupportMode] = useState(false);
 
   useEffect(() => {
     if (typeof params.results === 'string') {
@@ -264,6 +266,70 @@ export default function ResultScreen() {
     [results?.result]
   );
 
+  const handleShareResults = useCallback(() => {
+    if (!results) {
+      return;
+    }
+
+    const benefitsSummary = results.availableBenefits
+      .slice(0, 5)
+      .map((benefit) => `• ${benefit.label} : ${formatAmountWithPeriod(benefit.amount, benefit.period)}`)
+      .join('\n');
+
+    const summaryParts = [
+      'Simulation FacilAide+',
+      formattedTimestamp ? `Réalisée le ${formattedTimestamp}` : null,
+      benefitsSummary.length
+        ? `Aides estimées :\n${benefitsSummary}`
+        : "Aucune aide supplémentaire n'a été identifiée.",
+      benefitTotals.monthlyCount > 0
+        ? `Total mensuel estimé : ${formatCurrency(benefitTotals.monthlyTotal)}`
+        : null,
+      benefitTotals.yearlyCount > 0
+        ? `Total annuel estimé : ${formatCurrency(benefitTotals.yearlyTotal)}`
+        : null,
+      explanationSegments.length > 0
+        ? `Résumé personnalisé : ${explanationSegments.join(' ')}`
+        : null,
+    ].filter(Boolean);
+
+    Share.share({
+      title: 'Simulation FacilAide+',
+      message: summaryParts.join('\n\n'),
+    }).catch((error) => {
+      console.warn('Impossible de partager le résumé', error);
+    });
+  }, [results, formattedTimestamp, benefitTotals, explanationSegments]);
+
+  const handleExportTechnical = useCallback(() => {
+    if (!results) {
+      return;
+    }
+
+    const technicalPieces = [
+      rawJsonString ? `JSON interprété :\n${rawJsonString}` : null,
+      payloadString ? `Requête OpenFisca :\n${payloadString}` : null,
+      resultString ? `Réponse OpenFisca :\n${resultString}` : null,
+    ].filter(Boolean);
+
+    if (!technicalPieces.length) {
+      Share.share({
+        title: 'Simulation FacilAide+',
+        message: 'Aucune donnée technique disponible pour cette simulation.',
+      }).catch((error) => {
+        console.warn("Impossible d'exporter les données techniques", error);
+      });
+      return;
+    }
+
+    Share.share({
+      title: 'Données techniques FacilAide+',
+      message: technicalPieces.join('\n\n---\n\n'),
+    }).catch((error) => {
+      console.warn("Impossible d'exporter les données techniques", error);
+    });
+  }, [payloadString, rawJsonString, resultString, results]);
+
   if (!results) {
     return (
       <View style={styles.container}>
@@ -387,6 +453,21 @@ export default function ResultScreen() {
           </View>
         )}
 
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionButtonPrimary]}
+            onPress={handleShareResults}>
+            <Share2 size={18} color="#fff" style={styles.actionIcon} />
+            <Text style={styles.actionTextPrimary}>Partager le résumé</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionButtonSecondary]}
+            onPress={handleExportTechnical}>
+            <FileDown size={18} color="#2c3e50" style={styles.actionIcon} />
+            <Text style={styles.actionTextSecondary}>Exporter les données</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity
           style={styles.newSimulationButton}
           onPress={handleNewSimulation}>
@@ -400,76 +481,81 @@ export default function ResultScreen() {
           </Text>
         </View>
 
-        <View style={styles.debugSection}>
-          <Text style={styles.sectionTitle}>Détails techniques</Text>
-          <Text style={styles.debugHint}>
-            Ces informations facilitent le support en cas de problème.
-          </Text>
-
+        <View style={styles.supportSection}>
           <TouchableOpacity
-            style={styles.debugToggle}
-            onPress={() => setShowRawJson((previous) => !previous)}>
-            <Text style={styles.debugToggleText}>
-              {showRawJson ? 'Masquer' : 'Afficher'} le JSON interprété à partir du texte utilisateur
-            </Text>
-          </TouchableOpacity>
-          {showRawJson && (
-            rawJsonString ? (
-              <ScrollView
-                horizontal
-                style={styles.jsonScroll}
-                nestedScrollEnabled>
-                <Text style={styles.jsonText}>{rawJsonString}</Text>
-              </ScrollView>
-            ) : (
-              <Text style={styles.debugEmpty}>
-                Impossible d'afficher le JSON généré.
+            style={styles.supportToggle}
+            onPress={() => setIsSupportMode((previous) => !previous)}>
+            <LifeBuoy size={20} color="#1f3d4f" style={styles.supportIcon} />
+            <View style={styles.supportTexts}>
+              <Text style={styles.supportTitle}>Mode support technique</Text>
+              <Text style={styles.supportSubtitle}>
+                Accédez aux détails techniques pour diagnostiquer un problème avec un conseiller.
               </Text>
-            )
-          )}
+            </View>
+            <ChevronDown
+              size={18}
+              color="#1f3d4f"
+              style={[styles.supportChevron, isSupportMode && styles.supportChevronOpen]}
+            />
+          </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.debugToggle}
-            onPress={() => setShowPayload((previous) => !previous)}>
-            <Text style={styles.debugToggleText}>
-              {showPayload ? 'Masquer' : 'Afficher'} la requête envoyée à OpenFisca
-            </Text>
-          </TouchableOpacity>
-          {showPayload && (
-            payloadString ? (
-              <ScrollView
-                horizontal
-                style={styles.jsonScroll}
-                nestedScrollEnabled>
-                <Text style={styles.jsonText}>{payloadString}</Text>
-              </ScrollView>
-            ) : (
-              <Text style={styles.debugEmpty}>
-                Aucune requête formatée disponible.
+          {isSupportMode && (
+            <View style={styles.debugSection}>
+              <Text style={styles.debugHint}>
+                Ces informations sont à partager uniquement avec une personne en charge de votre support.
               </Text>
-            )
-          )}
 
-          <TouchableOpacity
-            style={styles.debugToggle}
-            onPress={() => setShowResultData((previous) => !previous)}>
-            <Text style={styles.debugToggleText}>
-              {showResultData ? 'Masquer' : 'Afficher'} la réponse brute d'OpenFisca
-            </Text>
-          </TouchableOpacity>
-          {showResultData && (
-            resultString ? (
-              <ScrollView
-                horizontal
-                style={styles.jsonScroll}
-                nestedScrollEnabled>
-                <Text style={styles.jsonText}>{resultString}</Text>
-              </ScrollView>
-            ) : (
-              <Text style={styles.debugEmpty}>
-                Impossible d'afficher la réponse OpenFisca.
-              </Text>
-            )
+              <TouchableOpacity
+                style={styles.debugToggle}
+                onPress={() => setShowRawJson((previous) => !previous)}>
+                <Text style={styles.debugToggleText}>
+                  {showRawJson ? 'Masquer' : 'Afficher'} le JSON interprété à partir du texte utilisateur
+                </Text>
+              </TouchableOpacity>
+              {showRawJson && (
+                rawJsonString ? (
+                  <ScrollView horizontal style={styles.jsonScroll} nestedScrollEnabled>
+                    <Text style={styles.jsonText}>{rawJsonString}</Text>
+                  </ScrollView>
+                ) : (
+                  <Text style={styles.debugEmpty}>Impossible d'afficher le JSON généré.</Text>
+                )
+              )}
+
+              <TouchableOpacity
+                style={styles.debugToggle}
+                onPress={() => setShowPayload((previous) => !previous)}>
+                <Text style={styles.debugToggleText}>
+                  {showPayload ? 'Masquer' : 'Afficher'} la requête envoyée à OpenFisca
+                </Text>
+              </TouchableOpacity>
+              {showPayload && (
+                payloadString ? (
+                  <ScrollView horizontal style={styles.jsonScroll} nestedScrollEnabled>
+                    <Text style={styles.jsonText}>{payloadString}</Text>
+                  </ScrollView>
+                ) : (
+                  <Text style={styles.debugEmpty}>Aucune requête formatée disponible.</Text>
+                )
+              )}
+
+              <TouchableOpacity
+                style={styles.debugToggle}
+                onPress={() => setShowResultData((previous) => !previous)}>
+                <Text style={styles.debugToggleText}>
+                  {showResultData ? 'Masquer' : 'Afficher'} la réponse brute d'OpenFisca
+                </Text>
+              </TouchableOpacity>
+              {showResultData && (
+                resultString ? (
+                  <ScrollView horizontal style={styles.jsonScroll} nestedScrollEnabled>
+                    <Text style={styles.jsonText}>{resultString}</Text>
+                  </ScrollView>
+                ) : (
+                  <Text style={styles.debugEmpty}>Impossible d'afficher la réponse OpenFisca.</Text>
+                )
+              )}
+            </View>
           )}
         </View>
       </ScrollView>
@@ -711,16 +797,84 @@ const styles = StyleSheet.create({
     color: '#8a6d3b',
     lineHeight: 18,
   },
-  debugSection: {
+  actionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+  },
+  actionButtonPrimary: {
+    backgroundColor: '#4ba3c3',
+    marginRight: 12,
+  },
+  actionButtonSecondary: {
+    backgroundColor: '#e3f2f9',
+  },
+  actionIcon: {
+    marginRight: 8,
+  },
+  actionTextPrimary: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  actionTextSecondary: {
+    color: '#1f3d4f',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  supportSection: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#dfe7ef',
+    overflow: 'hidden',
+  },
+  supportToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  supportIcon: {
+    marginRight: 12,
+  },
+  supportTexts: {
+    flex: 1,
+  },
+  supportTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1f3d4f',
+    marginBottom: 4,
+  },
+  supportSubtitle: {
+    fontSize: 12,
+    color: '#4b5c6b',
+    lineHeight: 16,
+  },
+  supportChevron: {
+    transform: [{ rotate: '0deg' }],
+  },
+  supportChevronOpen: {
+    transform: [{ rotate: '180deg' }],
+  },
+  debugSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#edf2f7',
+    padding: 16,
+    backgroundColor: '#f8fbff',
   },
   debugHint: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 12,
+    color: '#4b5c6b',
     marginBottom: 12,
   },
   debugToggle: {

@@ -65,8 +65,24 @@ export async function postJson<T>(
     ...headers,
   };
 
+  const isDev = (() => {
+    if (typeof __DEV__ !== 'undefined') {
+      return __DEV__;
+    }
+    if (typeof process !== 'undefined' && typeof process.env?.NODE_ENV === 'string') {
+      return process.env.NODE_ENV !== 'production';
+    }
+    return false;
+  })();
+
+  const debugLog = (...args: unknown[]) => {
+    if (isDev) {
+      console.log(...args);
+    }
+  };
+
   try {
-    console.log('Appel API sortant :', {
+    debugLog('Appel API sortant :', {
       method: 'POST',
       url,
       headers: requestHeaders,
@@ -84,7 +100,7 @@ export async function postJson<T>(
 
     const responseHeaders = Object.fromEntries(response.headers.entries());
 
-    console.log('Réponse API entrante :', {
+    debugLog('Réponse API entrante :', {
       url,
       status: response.status,
       statusText: response.statusText,

@@ -39,6 +39,8 @@ const LIFE_EVENT_OPTIONS = [
   { id: 'student', label: 'Étudiant' },
 ];
 
+const YES_NO_OPTIONS = ['oui', 'non'] as const;
+
 const EMPLOYMENT_OPTIONS = [
   'CDI temps plein',
   'CDD / Intérim',
@@ -98,6 +100,14 @@ export default function ChatScreen() {
   const [showGuidedAssistant, setShowGuidedAssistant] = useState(false);
   const [householdAdults, setHouseholdAdults] = useState('1');
   const [householdChildren, setHouseholdChildren] = useState('0');
+  const [disabledChildrenCount, setDisabledChildrenCount] = useState('');
+  const [disabledChildrenDetails, setDisabledChildrenDetails] = useState('');
+  const [childrenMdphRecognition, setChildrenMdphRecognition] = useState<'oui' | 'non' | null>(null);
+  const [disabledAdultsCount, setDisabledAdultsCount] = useState('');
+  const [adultsMdphRecognition, setAdultsMdphRecognition] = useState<'oui' | 'non' | null>(null);
+  const [hasRqth, setHasRqth] = useState<'oui' | 'non' | null>(null);
+  const [perceivesAah, setPerceivesAah] = useState<'oui' | 'non' | null>(null);
+  const [aahAmount, setAahAmount] = useState('');
   const [monthlyIncome, setMonthlyIncome] = useState('');
   const [housingType, setHousingType] = useState<'locataire' | 'proprietaire' | 'heberge'>('locataire');
   const [rentAmount, setRentAmount] = useState('');
@@ -201,6 +211,60 @@ export default function ChatScreen() {
       }
     }
 
+    const disabledChildrenValue = Number.parseInt(disabledChildrenCount, 10);
+    if (Number.isFinite(disabledChildrenValue) && disabledChildrenValue >= 0) {
+      if (disabledChildrenValue === 0) {
+        segments.push("Aucun enfant n'est en situation de handicap dans le foyer.");
+      } else if (disabledChildrenValue === 1) {
+        segments.push("Un enfant du foyer est en situation de handicap.");
+      } else {
+        segments.push(`${disabledChildrenValue} enfants du foyer sont en situation de handicap.`);
+      }
+    }
+
+    if (childrenMdphRecognition === 'oui') {
+      segments.push('Les enfants concernés sont reconnus par la MDPH.');
+    } else if (childrenMdphRecognition === 'non') {
+      segments.push("Les enfants concernés ne sont pas reconnus par la MDPH.");
+    }
+
+    if (disabledChildrenDetails.trim().length > 0) {
+      segments.push(disabledChildrenDetails.trim());
+    }
+
+    const disabledAdultsValue = Number.parseInt(disabledAdultsCount, 10);
+    if (Number.isFinite(disabledAdultsValue) && disabledAdultsValue >= 0) {
+      if (disabledAdultsValue === 0) {
+        segments.push("Aucun adulte du foyer n'est en situation de handicap.");
+      } else if (disabledAdultsValue === 1) {
+        segments.push('Un adulte du foyer est en situation de handicap.');
+      } else {
+        segments.push(`${disabledAdultsValue} adultes du foyer sont en situation de handicap.`);
+      }
+    }
+
+    if (adultsMdphRecognition === 'oui') {
+      segments.push('Les adultes concernés sont reconnus par la MDPH.');
+    } else if (adultsMdphRecognition === 'non') {
+      segments.push("Les adultes concernés ne sont pas reconnus par la MDPH.");
+    }
+
+    if (hasRqth === 'oui') {
+      segments.push("Au moins un adulte est titulaire d'une RQTH.");
+    } else if (hasRqth === 'non') {
+      segments.push("Personne dans le foyer n'est titulaire d'une RQTH.");
+    }
+
+    const formattedAah = formatCurrencyFromInput(aahAmount);
+    if (perceivesAah === 'oui') {
+      segments.push("Au moins un adulte perçoit l'AAH.");
+      if (formattedAah) {
+        segments.push(`Le montant mensuel de l'AAH est d'environ ${formattedAah}.`);
+      }
+    } else if (perceivesAah === 'non') {
+      segments.push("Personne ne perçoit l'AAH dans le foyer.");
+    }
+
     if (selectedLifeEvents.includes('single-parent')) {
       segments.push('Je suis parent isolé.');
     }
@@ -246,6 +310,14 @@ export default function ChatScreen() {
     householdChildren,
     selectedLifeEvents,
     selectedEmployment,
+    disabledChildrenCount,
+    disabledChildrenDetails,
+    childrenMdphRecognition,
+    disabledAdultsCount,
+    adultsMdphRecognition,
+    hasRqth,
+    perceivesAah,
+    aahAmount,
     monthlyIncome,
     housingType,
     rentAmount,
@@ -481,6 +553,142 @@ export default function ChatScreen() {
                     />
                   </View>
                 </View>
+
+                <Text style={styles.guidedLabel}>Handicap dans le foyer</Text>
+                <View style={styles.guidedRow}>
+                  <View style={styles.guidedField}>
+                    <Text style={styles.guidedFieldLabel}>
+                      Enfants en situation de handicap
+                    </Text>
+                    <TextInput
+                      style={styles.guidedInput}
+                      keyboardType="number-pad"
+                      placeholder="Ex : 1"
+                      value={disabledChildrenCount}
+                      onChangeText={setDisabledChildrenCount}
+                    />
+                  </View>
+                  <View style={[styles.guidedField, styles.guidedFieldLast]}>
+                    <Text style={styles.guidedFieldLabel}>
+                      Adultes en situation de handicap
+                    </Text>
+                    <TextInput
+                      style={styles.guidedInput}
+                      keyboardType="number-pad"
+                      placeholder="Ex : 1"
+                      value={disabledAdultsCount}
+                      onChangeText={setDisabledAdultsCount}
+                    />
+                  </View>
+                </View>
+
+                <Text style={styles.guidedFieldLabel}>
+                  Enfants concernés reconnus par la MDPH ?
+                </Text>
+                <View style={styles.chipRow}>
+                  {YES_NO_OPTIONS.map((option) => {
+                    const isSelected = childrenMdphRecognition === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        onPress={() =>
+                          setChildrenMdphRecognition((current) =>
+                            current === option ? null : option,
+                          )
+                        }>
+                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                          {option === 'oui' ? 'Oui' : 'Non'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.guidedFieldLabel}>Précisions sur les enfants concernés</Text>
+                <TextInput
+                  style={[styles.guidedInput, styles.guidedInputMultiline]}
+                  multiline
+                  numberOfLines={2}
+                  textAlignVertical="top"
+                  placeholder="Ex : Léa (10 ans) et Marc (7 ans)."
+                  value={disabledChildrenDetails}
+                  onChangeText={setDisabledChildrenDetails}
+                />
+
+                <Text style={styles.guidedFieldLabel}>
+                  Adultes concernés reconnus par la MDPH ?
+                </Text>
+                <View style={styles.chipRow}>
+                  {YES_NO_OPTIONS.map((option) => {
+                    const isSelected = adultsMdphRecognition === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        onPress={() =>
+                          setAdultsMdphRecognition((current) =>
+                            current === option ? null : option,
+                          )
+                        }>
+                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                          {option === 'oui' ? 'Oui' : 'Non'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.guidedFieldLabel}>Titulaire d'une RQTH ?</Text>
+                <View style={styles.chipRow}>
+                  {YES_NO_OPTIONS.map((option) => {
+                    const isSelected = hasRqth === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        onPress={() =>
+                          setHasRqth((current) => (current === option ? null : option))
+                        }>
+                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                          {option === 'oui' ? 'Oui' : 'Non'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.guidedFieldLabel}>Perception de l'AAH ?</Text>
+                <View style={styles.chipRow}>
+                  {YES_NO_OPTIONS.map((option) => {
+                    const isSelected = perceivesAah === option;
+                    return (
+                      <TouchableOpacity
+                        key={option}
+                        style={[styles.chip, isSelected && styles.chipSelected]}
+                        onPress={() =>
+                          setPerceivesAah((current) => (current === option ? null : option))
+                        }>
+                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                          {option === 'oui' ? 'Oui' : 'Non'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {perceivesAah === 'oui' && (
+                  <>
+                    <Text style={styles.guidedFieldLabel}>Montant mensuel de l'AAH</Text>
+                    <TextInput
+                      style={styles.guidedInput}
+                      keyboardType="decimal-pad"
+                      placeholder="Ex : 300"
+                      value={aahAmount}
+                      onChangeText={setAahAmount}
+                    />
+                  </>
+                )}
 
                 <Text style={styles.guidedLabel}>Situation professionnelle</Text>
                 <View style={styles.chipRow}>

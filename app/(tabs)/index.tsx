@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -57,6 +57,20 @@ const HOUSING_OPTIONS: Array<{
   { id: 'heberge', label: 'Hébergé gratuitement' },
 ];
 
+type AdultSituation = {
+  mdphRecognition: 'oui' | 'non' | null;
+  hasRqth: 'oui' | 'non' | null;
+  perceivesAah: 'oui' | 'non' | null;
+  aahAmount: string;
+};
+
+const createEmptyAdultSituation = (): AdultSituation => ({
+  mdphRecognition: null,
+  hasRqth: null,
+  perceivesAah: null,
+  aahAmount: '',
+});
+
 const formatCurrencyFromInput = (rawValue: string): string | null => {
   const sanitized = rawValue.replace(/[^0-9,.-]/g, '').replace(',', '.');
   if (!sanitized.trim().length) {
@@ -104,10 +118,9 @@ export default function ChatScreen() {
   const [disabledChildrenDetails, setDisabledChildrenDetails] = useState('');
   const [childrenMdphRecognition, setChildrenMdphRecognition] = useState<'oui' | 'non' | null>(null);
   const [disabledAdultsCount, setDisabledAdultsCount] = useState('');
-  const [adultsMdphRecognition, setAdultsMdphRecognition] = useState<'oui' | 'non' | null>(null);
-  const [hasRqth, setHasRqth] = useState<'oui' | 'non' | null>(null);
-  const [perceivesAah, setPerceivesAah] = useState<'oui' | 'non' | null>(null);
-  const [aahAmount, setAahAmount] = useState('');
+  const [adultSituations, setAdultSituations] = useState<AdultSituation[]>([
+    createEmptyAdultSituation(),
+  ]);
   const [monthlyIncome, setMonthlyIncome] = useState('');
   const [housingType, setHousingType] = useState<'locataire' | 'proprietaire' | 'heberge'>('locataire');
   const [rentAmount, setRentAmount] = useState('');
@@ -117,6 +130,32 @@ export default function ChatScreen() {
   const [historyEntries, setHistoryEntries] = useState<SimulationHistoryEntry[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const parsedAdults = Number.parseInt(householdAdults, 10);
+
+    if (!Number.isFinite(parsedAdults) || parsedAdults <= 0) {
+      setAdultSituations([]);
+      return;
+    }
+
+    setAdultSituations((current) => {
+      if (current.length === parsedAdults) {
+        return current;
+      }
+
+      if (current.length > parsedAdults) {
+        return current.slice(0, parsedAdults);
+      }
+
+      return [
+        ...current,
+        ...Array.from({ length: parsedAdults - current.length }, () =>
+          createEmptyAdultSituation(),
+        ),
+      ];
+    });
+  }, [householdAdults]);
 
   const { generateEndpoint, simulateEndpoint } = useMemo(() => {
     const defaultBaseUrl = 'https://facilaide-plus-backend.onrender.com';
@@ -190,6 +229,31 @@ export default function ChatScreen() {
     });
   }, []);
 
+  const setAdultSituationField = useCallback(
+    (
+      adultIndex: number,
+      field: keyof AdultSituation,
+      value: AdultSituation[keyof AdultSituation],
+    ) => {
+      setAdultSituations((current) => {
+        if (adultIndex < 0 || adultIndex >= current.length) {
+          return current;
+        }
+
+        const next = [...current];
+        const updatedAdult: AdultSituation = { ...next[adultIndex], [field]: value };
+
+        if (field === 'perceivesAah' && value !== 'oui') {
+          updatedAdult.aahAmount = '';
+        }
+
+        next[adultIndex] = updatedAdult;
+        return next;
+      });
+    },
+    [],
+  );
+
   const guidedSummary = useMemo(() => {
     const segments: string[] = [];
 
@@ -243,25 +307,72 @@ export default function ChatScreen() {
       }
     }
 
-    if (adultsMdphRecognition === 'oui') {
-      segments.push('Les adultes concernés sont reconnus par la MDPH.');
-    } else if (adultsMdphRecognition === 'non') {
-      segments.push("Les adultes concernés ne sont pas reconnus par la MDPH.");
+    const adultCount = adultSituations.length;
+    const mdphYesCount = adultSituations.filter((adult) => adult.mdphRecognition === 'oui').length;
+    const mdphNoCount = adultSituations.filter((adult) => adult.mdphRecognition === 'non').length;
+
+    if (mdphYesCount > 0) {
+      if (adultCount === 1) {
+        segments.push("L'adulte du foyer est reconnu par la MDPH.");
+      } else if (mdphYesCount === adultCount) {
+        segments.push('Les adultes concernés sont reconnus par la MDPH.');
+      } else if (mdphYesCount === 1) {
+        segments.push('Un adulte du foyer est reconnu par la MDPH.');
+      } else {
+        segments.push(`${mdphYesCount} adultes du foyer sont reconnus par la MDPH.`);
+      }
+    } else if (mdphNoCount === adultCount && adultCount > 0) {
+      segments.push("Aucun adulte du foyer n'est reconnu par la MDPH.");
     }
 
-    if (hasRqth === 'oui') {
-      segments.push("Au moins un adulte est titulaire d'une RQTH.");
-    } else if (hasRqth === 'non') {
+    const rqthYesCount = adultSituations.filter((adult) => adult.hasRqth === 'oui').length;
+    const rqthNoCount = adultSituations.filter((adult) => adult.hasRqth === 'non').length;
+
+    if (rqthYesCount > 0) {
+      if (adultCount === 1) {
+        segments.push("L'adulte du foyer est titulaire d'une RQTH.");
+      } else if (rqthYesCount === adultCount) {
+        segments.push("Tous les adultes du foyer sont titulaires d'une RQTH.");
+      } else if (rqthYesCount === 1) {
+        segments.push("Un adulte du foyer est titulaire d'une RQTH.");
+      } else {
+        segments.push(`${rqthYesCount} adultes du foyer sont titulaires d'une RQTH.`);
+      }
+    } else if (rqthNoCount === adultCount && adultCount > 0) {
       segments.push("Personne dans le foyer n'est titulaire d'une RQTH.");
     }
 
-    const formattedAah = formatCurrencyFromInput(aahAmount);
-    if (perceivesAah === 'oui') {
-      segments.push("Au moins un adulte perçoit l'AAH.");
-      if (formattedAah) {
-        segments.push(`Le montant mensuel de l'AAH est d'environ ${formattedAah}.`);
+    const adultsWithAah = adultSituations
+      .map((adult, index) => ({ adult, index }))
+      .filter(({ adult }) => adult.perceivesAah === 'oui');
+
+    if (adultsWithAah.length > 0) {
+      if (adultCount === 1) {
+        segments.push("L'adulte du foyer perçoit l'AAH.");
+      } else if (adultsWithAah.length === adultCount) {
+        segments.push("Tous les adultes du foyer perçoivent l'AAH.");
+      } else if (adultsWithAah.length === 1) {
+        segments.push("Un adulte du foyer perçoit l'AAH.");
+      } else {
+        segments.push(`${adultsWithAah.length} adultes du foyer perçoivent l'AAH.`);
       }
-    } else if (perceivesAah === 'non') {
+
+      adultsWithAah.forEach(({ adult, index }) => {
+        const formattedAah = formatCurrencyFromInput(adult.aahAmount);
+        if (!formattedAah) {
+          return;
+        }
+
+        if (adultCount === 1) {
+          segments.push(`Le montant mensuel de l'AAH est d'environ ${formattedAah}.`);
+        } else {
+          segments.push(`L'adulte ${index + 1} perçoit environ ${formattedAah} d'AAH par mois.`);
+        }
+      });
+    } else if (
+      adultCount > 0 &&
+      adultSituations.every((adult) => adult.perceivesAah === 'non')
+    ) {
       segments.push("Personne ne perçoit l'AAH dans le foyer.");
     }
 
@@ -314,10 +425,7 @@ export default function ChatScreen() {
     disabledChildrenDetails,
     childrenMdphRecognition,
     disabledAdultsCount,
-    adultsMdphRecognition,
-    hasRqth,
-    perceivesAah,
-    aahAmount,
+    adultSituations,
     monthlyIncome,
     housingType,
     rentAmount,
@@ -616,77 +724,109 @@ export default function ChatScreen() {
                   onChangeText={setDisabledChildrenDetails}
                 />
 
-                <Text style={styles.guidedFieldLabel}>
-                  Adultes concernés reconnus par la MDPH ?
-                </Text>
-                <View style={styles.chipRow}>
-                  {YES_NO_OPTIONS.map((option) => {
-                    const isSelected = adultsMdphRecognition === option;
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() =>
-                          setAdultsMdphRecognition((current) =>
-                            current === option ? null : option,
-                          )
-                        }>
-                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                          {option === 'oui' ? 'Oui' : 'Non'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <Text style={styles.guidedFieldLabel}>Titulaire d'une RQTH ?</Text>
-                <View style={styles.chipRow}>
-                  {YES_NO_OPTIONS.map((option) => {
-                    const isSelected = hasRqth === option;
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() =>
-                          setHasRqth((current) => (current === option ? null : option))
-                        }>
-                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                          {option === 'oui' ? 'Oui' : 'Non'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <Text style={styles.guidedFieldLabel}>Perception de l'AAH ?</Text>
-                <View style={styles.chipRow}>
-                  {YES_NO_OPTIONS.map((option) => {
-                    const isSelected = perceivesAah === option;
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() =>
-                          setPerceivesAah((current) => (current === option ? null : option))
-                        }>
-                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                          {option === 'oui' ? 'Oui' : 'Non'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {perceivesAah === 'oui' && (
+                {adultSituations.length > 0 && (
                   <>
-                    <Text style={styles.guidedFieldLabel}>Montant mensuel de l'AAH</Text>
-                    <TextInput
-                      style={styles.guidedInput}
-                      keyboardType="decimal-pad"
-                      placeholder="Ex : 300"
-                      value={aahAmount}
-                      onChangeText={setAahAmount}
-                    />
+                    <Text style={styles.guidedLabel}>Situation des adultes</Text>
+                    {adultSituations.map((adult, index) => {
+                      const showAdultTitle = adultSituations.length > 1;
+                      return (
+                        <View key={`adult-${index}`} style={styles.adultSection}>
+                          {showAdultTitle && (
+                            <Text style={styles.adultSectionTitle}>Adulte {index + 1}</Text>
+                          )}
+
+                          <Text style={styles.guidedFieldLabel}>Reconnu par la MDPH ?</Text>
+                          <View style={styles.chipRow}>
+                            {YES_NO_OPTIONS.map((option) => {
+                              const isSelected = adult.mdphRecognition === option;
+                              return (
+                                <TouchableOpacity
+                                  key={option}
+                                  style={[styles.chip, isSelected && styles.chipSelected]}
+                                  onPress={() =>
+                                    setAdultSituationField(
+                                      index,
+                                      'mdphRecognition',
+                                      isSelected ? null : option,
+                                    )
+                                  }>
+                                  <Text
+                                    style={[styles.chipText, isSelected && styles.chipTextSelected]}
+                                  >
+                                    {option === 'oui' ? 'Oui' : 'Non'}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          <Text style={styles.guidedFieldLabel}>Titulaire d'une RQTH ?</Text>
+                          <View style={styles.chipRow}>
+                            {YES_NO_OPTIONS.map((option) => {
+                              const isSelected = adult.hasRqth === option;
+                              return (
+                                <TouchableOpacity
+                                  key={option}
+                                  style={[styles.chip, isSelected && styles.chipSelected]}
+                                  onPress={() =>
+                                    setAdultSituationField(
+                                      index,
+                                      'hasRqth',
+                                      isSelected ? null : option,
+                                    )
+                                  }>
+                                  <Text
+                                    style={[styles.chipText, isSelected && styles.chipTextSelected]}
+                                  >
+                                    {option === 'oui' ? 'Oui' : 'Non'}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          <Text style={styles.guidedFieldLabel}>Perçoit l'AAH ?</Text>
+                          <View style={styles.chipRow}>
+                            {YES_NO_OPTIONS.map((option) => {
+                              const isSelected = adult.perceivesAah === option;
+                              return (
+                                <TouchableOpacity
+                                  key={option}
+                                  style={[styles.chip, isSelected && styles.chipSelected]}
+                                  onPress={() =>
+                                    setAdultSituationField(
+                                      index,
+                                      'perceivesAah',
+                                      isSelected ? null : option,
+                                    )
+                                  }>
+                                  <Text
+                                    style={[styles.chipText, isSelected && styles.chipTextSelected]}
+                                  >
+                                    {option === 'oui' ? 'Oui' : 'Non'}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          {adult.perceivesAah === 'oui' && (
+                            <>
+                              <Text style={styles.guidedFieldLabel}>Montant mensuel de l'AAH</Text>
+                              <TextInput
+                                style={styles.guidedInput}
+                                keyboardType="decimal-pad"
+                                placeholder="Ex : 300"
+                                value={adult.aahAmount}
+                                onChangeText={(value) =>
+                                  setAdultSituationField(index, 'aahAmount', value)
+                                }
+                              />
+                            </>
+                          )}
+                        </View>
+                      );
+                    })}
                   </>
                 )}
 
@@ -1031,6 +1171,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#2c3e50',
     marginBottom: 16,
+  },
+  adultSection: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e3ebf5',
+    padding: 12,
+    marginBottom: 16,
+  },
+  adultSectionTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 8,
   },
   guidedInputMultiline: {
     minHeight: 80,

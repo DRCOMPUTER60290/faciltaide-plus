@@ -15,6 +15,13 @@ export interface SimulationResultPayload {
   generatedAt: string;
 }
 
+export interface SimulationHistoryEntry {
+  id: string;
+  createdAt: string;
+  message: string;
+  results: SimulationResultPayload;
+}
+
 export interface ApiGenerateResponse {
   json?: unknown;
 }

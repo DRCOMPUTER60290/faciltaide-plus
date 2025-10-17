@@ -41,12 +41,124 @@ const LIFE_EVENT_OPTIONS = [
 
 const YES_NO_OPTIONS = ['oui', 'non'] as const;
 
-const EMPLOYMENT_OPTIONS = [
-  'CDI temps plein',
-  'CDD / Intérim',
-  'Travailleur indépendant',
-  'Sans emploi actuellement',
-];
+const PROFESSIONAL_STATUS_OPTIONS = [
+  { id: 'salarie', label: 'salarié' },
+  { id: 'profession-liberale', label: 'profession libérale, entrepreneur' },
+  { id: 'responsable-exploitation', label: "responsable d'exploitation agricole" },
+  { id: 'micro-entrepreneur', label: 'micro-entrepreneur' },
+  { id: 'auto-entrepreneur', label: 'auto-entrepreneur' },
+  { id: 'apprenti', label: 'apprenti' },
+  { id: 'stagiaire-hors-formation', label: 'stagiaire hors formation professionnelle' },
+  { id: 'stagiaire-formation', label: 'stagiaire de formation professionnelle' },
+  { id: 'boursier-sup', label: "boursier de l'enseignement supérieur" },
+  { id: 'boursier-recherche', label: 'boursier de recherche' },
+  { id: 'chomage-partiel', label: 'salarié en chômage partiel ou technique' },
+  { id: 'demandeur-emploi', label: "demandeur d'emploi indemnisé" },
+  { id: 'prime-activite', label: "bénéficiaire de la prime d'activité" },
+  {
+    id: 'allocation-securisation',
+    label: "bénéficiaire de l'allocation de sécurisation professionnelle",
+  },
+  {
+    id: 'indemnite-licenciement',
+    label: "bénéficiaire d'une indemnité de licenciement, rupture, fin de CDD, congés payés...",
+  },
+  {
+    id: 'prime-reprise-activite',
+    label: "bénéficiaire d'une prime forfaitaire mensuelle pour la reprise d'activité",
+  },
+  {
+    id: 'adefip',
+    label: "bénéficiaire de l'Aide départementale Financière d'Insertion Personnalisée (AdeFIP)",
+  },
+  { id: 'pre-retraite', label: 'pré-retraité' },
+] as const;
+
+const INCOME_GROUPS = [
+  {
+    id: 'activity',
+    label: "Revenus d'activité",
+    options: [
+      { id: 'salaires', label: 'salaires, primes, heures supplémentaires' },
+      { id: 'independants', label: 'revenus des indépendants (BIC/BNC)' },
+      { id: 'agricoles', label: 'revenus agricoles' },
+      { id: 'micro-ca', label: 'chiffre d’affaires micro-entrepreneur' },
+    ],
+  },
+  {
+    id: 'indemnities',
+    label: 'Indemnités',
+    options: [
+      { id: 'maladie', label: 'indemnités journalières maladie' },
+      { id: 'maternite', label: 'indemnités journalières maternité, paternité ou adoption' },
+      { id: 'accident-travail', label: 'indemnités maladie professionnelle ou accident du travail' },
+      { id: 'volontariat', label: 'indemnités de volontariat' },
+      {
+        id: 'travailleur-independant',
+        label: 'indemnités journalières travailleur indépendant et exploitant agricole',
+      },
+      { id: 'amiante', label: 'indemnisations pour victimes de l’amiante' },
+    ],
+  },
+  {
+    id: 'pensions',
+    label: 'Pensions ou rentes',
+    options: [
+      { id: 'invalidite', label: "pension d'invalidité" },
+      { id: 'retraite', label: 'pension (retraite, réversion, de combattant) ou rente' },
+      { id: 'accident-travail-rente', label: 'rente accident du travail, ATEXA' },
+    ],
+  },
+  {
+    id: 'pensions-alimentaires',
+    label: 'Pensions alimentaires, charges et frais',
+    options: [
+      { id: 'alimentaires-recues', label: 'pensions alimentaires reçues' },
+      { id: 'alimentaires-versees', label: 'pensions alimentaires versées' },
+      { id: 'prestations-compensatoires', label: 'prestations compensatoires reçues' },
+      { id: 'autres-charges', label: 'autres charges à déduire du revenu' },
+      { id: 'frais-deductibles', label: 'frais déductibles' },
+    ],
+  },
+  {
+    id: 'allocations',
+    label: 'Allocations',
+    options: [
+      { id: 'allocations-familiales', label: 'allocations familiales' },
+      { id: 'complement-familial', label: 'complément familial' },
+      { id: 'allocation-soutien', label: 'allocation de soutien familial' },
+      { id: 'cmg', label: 'complément de libre choix mode de garde (CMG)' },
+      { id: 'paje-base', label: "prestation d'accueil du jeune enfant (PAJE) - Allocation de base" },
+      { id: 'prepare', label: "prestation partagée d'éducation de l'enfant (PREPARE)" },
+      { id: 'allocations-logement', label: 'allocations logement' },
+      { id: 'aeeh', label: "allocation d'éducation de l'enfant handicapé (AEEH)" },
+      { id: 'allocation-ressources', label: 'allocation de ressources (CR)' },
+      { id: 'mva', label: 'majoration pour la vie autonome (MVA)' },
+      { id: 'pch', label: 'prestation de compensation du handicap (PCH)' },
+      { id: 'rsa', label: 'revenu de solidarité active (RSA)' },
+      { id: 'aspa', label: 'allocation de solidarité aux personnes âgées (ASPA)' },
+      { id: 'apa', label: 'allocation personnalisée d’autonomie à domicile (APA)' },
+      { id: 'asi', label: 'allocation supplémentaire d’invalidité (ASI)' },
+    ],
+  },
+  {
+    id: 'patrimonial',
+    label: 'Revenus patrimoniaux ou gains',
+    options: [
+      { id: 'revenus-locatifs', label: 'revenus locatifs (terrains, appartements, SCI, ...)' },
+      { id: 'revenus-capital', label: 'revenus du capital (intérêts, plus-values, dividendes, ...)' },
+      {
+        id: 'plus-values',
+        label: 'montant des plus-values utilisé pour le montant total de revenus du capital',
+      },
+      { id: 'gains-exceptionnels', label: 'gains exceptionnels (dons, gains aux jeux, héritage)' },
+    ],
+  },
+] as const satisfies ReadonlyArray<{
+  id: string;
+  label: string;
+  options: ReadonlyArray<{ id: string; label: string }>;
+}>;
 
 const HOUSING_OPTIONS: Array<{
   id: 'locataire' | 'proprietaire' | 'heberge';
@@ -57,11 +169,22 @@ const HOUSING_OPTIONS: Array<{
   { id: 'heberge', label: 'Hébergé gratuitement' },
 ];
 
+type IncomeSelection = Record<string, Record<string, string>>;
+
+const createEmptyIncomeSelection = (): IncomeSelection => {
+  return INCOME_GROUPS.reduce<IncomeSelection>((acc, group) => {
+    acc[group.id] = {};
+    return acc;
+  }, {});
+};
+
 type AdultSituation = {
   mdphRecognition: 'oui' | 'non' | null;
   hasRqth: 'oui' | 'non' | null;
   perceivesAah: 'oui' | 'non' | null;
   aahAmount: string;
+  employmentStatuses: string[];
+  incomes: IncomeSelection;
 };
 
 const createEmptyAdultSituation = (): AdultSituation => ({
@@ -69,6 +192,8 @@ const createEmptyAdultSituation = (): AdultSituation => ({
   hasRqth: null,
   perceivesAah: null,
   aahAmount: '',
+  employmentStatuses: [],
+  incomes: createEmptyIncomeSelection(),
 });
 
 const formatCurrencyFromInput = (rawValue: string): string | null => {
@@ -121,12 +246,10 @@ export default function ChatScreen() {
   const [adultSituations, setAdultSituations] = useState<AdultSituation[]>([
     createEmptyAdultSituation(),
   ]);
-  const [monthlyIncome, setMonthlyIncome] = useState('');
   const [housingType, setHousingType] = useState<'locataire' | 'proprietaire' | 'heberge'>('locataire');
   const [rentAmount, setRentAmount] = useState('');
   const [otherResources, setOtherResources] = useState('');
   const [selectedLifeEvents, setSelectedLifeEvents] = useState<string[]>([]);
-  const [selectedEmployment, setSelectedEmployment] = useState<string | null>(null);
   const [historyEntries, setHistoryEntries] = useState<SimulationHistoryEntry[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState<string | null>(null);
@@ -248,6 +371,91 @@ export default function ChatScreen() {
         }
 
         next[adultIndex] = updatedAdult;
+        return next;
+      });
+    },
+    [],
+  );
+
+  const toggleAdultEmploymentStatus = useCallback((adultIndex: number, statusId: string) => {
+    setAdultSituations((current) => {
+      if (adultIndex < 0 || adultIndex >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      const adult = next[adultIndex];
+      const currentStatuses = adult.employmentStatuses;
+      const hasStatus = currentStatuses.includes(statusId);
+      const updatedStatuses = hasStatus
+        ? currentStatuses.filter((id) => id !== statusId)
+        : [...currentStatuses, statusId];
+
+      next[adultIndex] = { ...adult, employmentStatuses: updatedStatuses };
+      return next;
+    });
+  }, []);
+
+  const toggleAdultIncomeOption = useCallback(
+    (adultIndex: number, groupId: string, optionId: string) => {
+      setAdultSituations((current) => {
+        if (adultIndex < 0 || adultIndex >= current.length) {
+          return current;
+        }
+
+        const next = [...current];
+        const adult = next[adultIndex];
+        const currentGroup = adult.incomes[groupId] ?? {};
+        const updatedGroup = { ...currentGroup };
+
+        if (optionId in updatedGroup) {
+          delete updatedGroup[optionId];
+        } else {
+          updatedGroup[optionId] = '';
+        }
+
+        next[adultIndex] = {
+          ...adult,
+          incomes: {
+            ...adult.incomes,
+            [groupId]: updatedGroup,
+          },
+        };
+
+        return next;
+      });
+    },
+    [],
+  );
+
+  const setAdultIncomeAmount = useCallback(
+    (adultIndex: number, groupId: string, optionId: string, amount: string) => {
+      setAdultSituations((current) => {
+        if (adultIndex < 0 || adultIndex >= current.length) {
+          return current;
+        }
+
+        const next = [...current];
+        const adult = next[adultIndex];
+        const currentGroup = adult.incomes[groupId] ?? {};
+
+        if (!(optionId in currentGroup)) {
+          return current;
+        }
+
+        const updatedGroup = {
+          ...currentGroup,
+          [optionId]: amount,
+        };
+
+        next[adultIndex] = {
+          ...adult,
+          incomes: {
+            ...adult.incomes,
+            [groupId]: updatedGroup,
+          },
+        };
+
         return next;
       });
     },
@@ -376,6 +584,54 @@ export default function ChatScreen() {
       segments.push("Personne ne perçoit l'AAH dans le foyer.");
     }
 
+    adultSituations.forEach((adult, index) => {
+      const statusLabels = adult.employmentStatuses
+        .map((statusId) =>
+          PROFESSIONAL_STATUS_OPTIONS.find((option) => option.id === statusId)?.label,
+        )
+        .filter((label): label is string => Boolean(label));
+
+      if (statusLabels.length > 0) {
+        if (adultCount === 1) {
+          segments.push(`Ma situation professionnelle : ${statusLabels.join(', ')}.`);
+        } else {
+          segments.push(
+            `L'adulte ${index + 1} a pour situation professionnelle : ${statusLabels.join(', ')}.`,
+          );
+        }
+      }
+
+      INCOME_GROUPS.forEach((group) => {
+        const groupIncomes = adult.incomes[group.id];
+        if (!groupIncomes) {
+          return;
+        }
+
+        Object.entries(groupIncomes).forEach(([optionId, amount]) => {
+          const optionLabel = group.options.find((option) => option.id === optionId)?.label;
+          if (!optionLabel) {
+            return;
+          }
+
+          const formattedAmount = formatCurrencyFromInput(amount);
+
+          if (adultCount === 1) {
+            segments.push(
+              formattedAmount
+                ? `Je perçois ${optionLabel} pour environ ${formattedAmount} par mois.`
+                : `Je perçois ${optionLabel}.`,
+            );
+          } else {
+            segments.push(
+              formattedAmount
+                ? `L'adulte ${index + 1} perçoit ${optionLabel} pour environ ${formattedAmount} par mois.`
+                : `L'adulte ${index + 1} perçoit ${optionLabel}.`,
+            );
+          }
+        });
+      });
+    });
+
     if (selectedLifeEvents.includes('single-parent')) {
       segments.push('Je suis parent isolé.');
     }
@@ -387,15 +643,6 @@ export default function ChatScreen() {
     }
     if (selectedLifeEvents.includes('student')) {
       segments.push('Je suis étudiant(e).');
-    }
-
-    if (selectedEmployment) {
-      segments.push(`Ma situation professionnelle : ${selectedEmployment}.`);
-    }
-
-    const formattedIncome = formatCurrencyFromInput(monthlyIncome);
-    if (formattedIncome) {
-      segments.push(`Mes revenus mensuels nets sont d'environ ${formattedIncome}.`);
     }
 
     segments.push(
@@ -420,13 +667,11 @@ export default function ChatScreen() {
     householdAdults,
     householdChildren,
     selectedLifeEvents,
-    selectedEmployment,
     disabledChildrenCount,
     disabledChildrenDetails,
     childrenMdphRecognition,
     disabledAdultsCount,
     adultSituations,
-    monthlyIncome,
     housingType,
     rentAmount,
     otherResources,
@@ -824,41 +1069,75 @@ export default function ChatScreen() {
                               />
                             </>
                           )}
+
+                          <Text style={styles.guidedFieldLabel}>Situation professionnelle</Text>
+                          <View style={styles.optionList}>
+                            {PROFESSIONAL_STATUS_OPTIONS.map((status) => {
+                              const isSelected = adult.employmentStatuses.includes(status.id);
+                              return (
+                                <TouchableOpacity
+                                  key={status.id}
+                                  style={[styles.optionRow, isSelected && styles.optionRowSelected]}
+                                  onPress={() => toggleAdultEmploymentStatus(index, status.id)}>
+                                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]} />
+                                  <Text
+                                    style={[styles.optionText, isSelected && styles.optionTextSelected]}
+                                  >
+                                    {status.label}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </View>
+
+                          <Text style={styles.guidedFieldLabel}>Revenus et ressources</Text>
+                          <View style={styles.incomeGroups}>
+                            {INCOME_GROUPS.map((group) => {
+                              const groupIncomes = adult.incomes[group.id] ?? {};
+                              return (
+                                <View key={group.id} style={styles.incomeGroup}>
+                                  <Text style={styles.incomeGroupTitle}>{group.label}</Text>
+                                  {group.options.map((option) => {
+                                    const isSelected = option.id in groupIncomes;
+                                    return (
+                                      <View key={option.id} style={styles.incomeOption}>
+                                        <TouchableOpacity
+                                          style={[styles.optionRow, isSelected && styles.optionRowSelected]}
+                                          onPress={() =>
+                                            toggleAdultIncomeOption(index, group.id, option.id)
+                                          }>
+                                          <View
+                                            style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+                                          />
+                                          <Text
+                                            style={[styles.optionText, isSelected && styles.optionTextSelected]}
+                                          >
+                                            {option.label}
+                                          </Text>
+                                        </TouchableOpacity>
+                                        {isSelected && (
+                                          <TextInput
+                                            style={styles.incomeAmountInput}
+                                            keyboardType="decimal-pad"
+                                            placeholder="Montant mensuel"
+                                            value={groupIncomes[option.id] ?? ''}
+                                            onChangeText={(value) =>
+                                              setAdultIncomeAmount(index, group.id, option.id, value)
+                                            }
+                                          />
+                                        )}
+                                      </View>
+                                    );
+                                  })}
+                                </View>
+                              );
+                            })}
+                          </View>
                         </View>
                       );
                     })}
                   </>
                 )}
-
-                <Text style={styles.guidedLabel}>Situation professionnelle</Text>
-                <View style={styles.chipRow}>
-                  {EMPLOYMENT_OPTIONS.map((option) => {
-                    const isSelected = selectedEmployment === option;
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() =>
-                          setSelectedEmployment((current) =>
-                            current === option ? null : option,
-                          )
-                        }>
-                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <Text style={styles.guidedLabel}>Revenus mensuels nets</Text>
-                <TextInput
-                  style={styles.guidedInput}
-                  keyboardType="decimal-pad"
-                  placeholder="Ex : 1450"
-                  value={monthlyIncome}
-                  onChangeText={setMonthlyIncome}
-                />
 
                 <Text style={styles.guidedLabel}>Logement</Text>
                 <View style={styles.chipRow}>
@@ -1188,6 +1467,71 @@ const styles = StyleSheet.create({
   },
   guidedInputMultiline: {
     minHeight: 80,
+  },
+  optionList: {
+    marginBottom: 16,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#d6e0eb',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
+  optionRowSelected: {
+    borderColor: '#4ba3c3',
+    backgroundColor: '#f0f7fb',
+  },
+  optionText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#2c3e50',
+  },
+  optionTextSelected: {
+    fontWeight: '600',
+    color: '#2c3e50',
+  },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#b0c4d4',
+    marginRight: 10,
+    backgroundColor: '#fff',
+  },
+  checkboxSelected: {
+    backgroundColor: '#4ba3c3',
+    borderColor: '#4ba3c3',
+  },
+  incomeGroups: {
+    marginBottom: 16,
+  },
+  incomeGroup: {
+    marginBottom: 12,
+  },
+  incomeGroupTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 6,
+  },
+  incomeOption: {
+    marginBottom: 8,
+  },
+  incomeAmountInput: {
+    marginTop: 6,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d6e0eb',
+    padding: 10,
+    fontSize: 14,
+    color: '#2c3e50',
   },
   guidedPreviewBox: {
     backgroundColor: '#f1f7fb',

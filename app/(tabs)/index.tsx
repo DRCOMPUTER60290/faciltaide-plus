@@ -32,64 +32,307 @@ import {
 } from '@/lib/history';
 import type { SimulationHistoryEntry } from '@/types/simulation';
 
-const LIFE_EVENT_OPTIONS = [
-  { id: 'single-parent', label: 'Parent isolé' },
-  { id: 'disabled', label: 'Reconnu handicapé' },
-  { id: 'pregnant', label: 'Grossesse en cours' },
-  { id: 'student', label: 'Étudiant' },
-];
-
-const HOUSING_OPTIONS: Array<{
-  id: 'locataire' | 'proprietaire' | 'heberge';
-  label: string;
-}> = [
-  { id: 'locataire', label: 'Locataire' },
-  { id: 'proprietaire', label: 'Propriétaire' },
-  { id: 'heberge', label: 'Hébergé gratuitement' },
-];
-
-const MARITAL_STATUS_OPTIONS = [
-  { id: 'single', label: 'célibataire' },
-  { id: 'couple', label: 'en couple' },
-  { id: 'married', label: 'marié(e)' },
-  { id: 'pacsed', label: 'pacsé(e)' },
-  { id: 'separated', label: 'séparé(e) ou divorcé(e)' },
-  { id: 'widowed', label: 'veuf/veuve' },
-] as const;
-
 type ChatMessage = {
   id: string;
   role: 'bot' | 'user';
   text: string;
 };
 
-const normalizeText = (value: string): string =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim();
-
-const formatCurrencyFromInput = (rawValue: string): string | null => {
-  const sanitized = rawValue.replace(/[^0-9,.-]/g, '').replace(',', '.');
-  if (!sanitized.trim().length) {
-    return null;
-  }
-
-  const value = Number(sanitized);
-  if (!Number.isFinite(value)) {
-    return rawValue.trim();
-  }
-
-  try {
-    return `${
-      value.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
-    } €`;
-  } catch (error) {
-    console.warn('Impossible de formater le montant', error);
-    return `${value} €`;
-  }
+type ChatStep = {
+  id: string;
+  prompt: string;
+  section: string;
+  label?: string;
+  type?: 'info' | 'question';
 };
+
+const CHAT_PLAN_STEPS: ChatStep[] = [
+  {
+    id: 'section1-intro',
+    type: 'info',
+    section: 'Section 1 – Composition du foyer',
+    prompt: '🔷 SECTION 1 – COMPOSITION DU FOYER',
+  },
+  {
+    id: 'primary-first-name',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Prénom',
+    prompt: '1. Quel est votre prénom ?',
+  },
+  {
+    id: 'primary-birth-date',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Date de naissance',
+    prompt: '2. Quelle est votre date de naissance ? (JJ/MM/AAAA)',
+  },
+  {
+    id: 'primary-sex',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Sexe',
+    prompt: '3. Quel est votre sexe ? (Masculin / Féminin)',
+  },
+  {
+    id: 'living-arrangement',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Vous vivez',
+    prompt: '4. Vivez-vous : Seul(e) ou En couple ? Indiquez « Seul(e) » ou « En couple ».',
+  },
+  {
+    id: 'spouse-first-name',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Prénom du conjoint',
+    prompt:
+      '5. Si vous vivez en couple, quel est le prénom de votre conjoint(e) ? Répondez « Non applicable » si vous vivez seul(e).',
+  },
+  {
+    id: 'spouse-birth-date',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Date de naissance du conjoint',
+    prompt:
+      '6. Si vous vivez en couple, quelle est sa date de naissance ? (JJ/MM/AAAA) Répondez « Non applicable » si vous vivez seul(e).',
+  },
+  {
+    id: 'spouse-sex',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Sexe du conjoint',
+    prompt:
+      '7. Si vous vivez en couple, quel est son sexe ? Répondez « Non applicable » si vous vivez seul(e).',
+  },
+  {
+    id: 'conjugal-status',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Statut conjugal',
+    prompt:
+      '8. Quel est votre statut conjugal ? (Marié(e), Pacsé(e), Union libre, etc.) Indiquez « Non applicable » si vous vivez seul(e).',
+  },
+  {
+    id: 'dependents-any',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Enfants ou personnes à charge',
+    prompt:
+      '9. Avez-vous des enfants ou des personnes à charge vivant avec vous ? (Oui / Non)',
+  },
+  {
+    id: 'dependents-details',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Détails des enfants / personnes à charge',
+    prompt:
+      '10-14. Pour chaque enfant ou personne à charge, indiquez : prénom, date de naissance, sexe et si la garde est alternée (Oui/Non). Répondez « Aucun » si personne ne vit avec vous.',
+  },
+  {
+    id: 'section2-intro',
+    type: 'info',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    prompt: '🔶 SECTION 2 – SITUATION PROFESSIONNELLE ET PERSONNELLE',
+  },
+  {
+    id: 'adult1-situation',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Situation actuelle (adulte 1)',
+    prompt:
+      '15. Pour vous (adulte 1), quelle est votre situation actuelle ? (Salarié(e), Travailleur indépendant / auto-entrepreneur, Demandeur d’emploi indemnisé, Demandeur d’emploi non indemnisé, Étudiant(e), En situation de handicap, Sans activité / au foyer, Retraité(e)).',
+  },
+  {
+    id: 'adult1-details',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Détails situation adulte 1',
+    prompt:
+      '16-32. Précisez toutes les informations liées à cette situation (type de contrat, temps de travail, dates, allocations chômage et montants, statut d’indépendant, reconnaissance handicap, aides sociales, date de retraite, etc.). Indiquez « Non applicable » si aucune précision.',
+  },
+  {
+    id: 'adult2-intent',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Souhaitez-vous renseigner le conjoint',
+    prompt:
+      '33. Souhaitez-vous renseigner la situation de votre conjoint(e) ? (Oui / Non / Non applicable).',
+  },
+  {
+    id: 'adult2-situation',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Situation actuelle (adulte 2)',
+    prompt:
+      '34. Si oui, quelle est sa situation actuelle ? (Même liste que pour vous). Répondez « Non applicable » si vous n’êtes pas en couple ou ne souhaitez pas renseigner.',
+  },
+  {
+    id: 'adult2-details',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Détails situation adulte 2',
+    prompt:
+      '35. Précisez les informations complémentaires pour votre conjoint(e) (type de contrat, dates, allocations, aides, etc.) ou indiquez « Non applicable ».',
+  },
+  {
+    id: 'pregnancy-info',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Grossesse',
+    prompt:
+      '34-35. Pour chaque femme du foyer âgée de 15 à 50 ans (vous et/ou votre conjoint[e]), indiquez si une grossesse est en cours et depuis combien de mois (moins de 3 mois, 3-6 mois, plus de 6 mois). Répondez « Non » ou « Non applicable » si aucune grossesse.',
+  },
+  {
+    id: 'section3-intro',
+    type: 'info',
+    section: 'Section 3 – Logement',
+    prompt: '🔷 SECTION 3 – LOGEMENT',
+  },
+  {
+    id: 'housing-postal-code',
+    section: 'Section 3 – Logement',
+    label: 'Code postal',
+    prompt: '1. Quel est votre code postal de résidence principale ?',
+  },
+  {
+    id: 'housing-city',
+    section: 'Section 3 – Logement',
+    label: 'Commune',
+    prompt: '2. Quelle est la commune correspondante ? (si possible, précisez parmi les communes associées)',
+  },
+  {
+    id: 'housing-status',
+    section: 'Section 3 – Logement',
+    label: 'Statut d’occupation',
+    prompt:
+      '3. Quel est votre statut d’occupation ? (Locataire vide, Locataire meublé, Colocation, Logement social, Propriétaire, Hébergé gratuitement, Logement étudiant, Hébergement d’urgence / sans domicile).',
+  },
+  {
+    id: 'housing-details',
+    section: 'Section 3 – Logement',
+    label: 'Détails logement et montants',
+    prompt:
+      '4-22. Précisez les informations liées à votre statut : loyer hors charges, charges, bail, logement conventionné, colocation, montant des aides logement déjà perçues, mensualités de prêt, type d’hébergement gratuit et contributions, type de logement étudiant, type d’hébergement d’urgence, etc. Indiquez « Non applicable » pour les éléments qui ne vous concernent pas.',
+  },
+  {
+    id: 'housing-people',
+    section: 'Section 3 – Logement',
+    label: 'Personnes dans le logement',
+    prompt: '23. Combien de personnes vivent dans ce logement (adultes + enfants, vous compris) ?',
+  },
+  {
+    id: 'housing-charges',
+    section: 'Section 3 – Logement',
+    label: 'Répartition des charges',
+    prompt: '24. Êtes-vous uniquement responsable des charges ou les partagez-vous ?',
+  },
+  {
+    id: 'housing-continue',
+    section: 'Section 3 – Logement',
+    label: 'Continuer vers les revenus',
+    prompt: 'Souhaitez-vous continuer vers les ressources et revenus ? (Oui / Non)',
+  },
+  {
+    id: 'section4-intro',
+    type: 'info',
+    section: 'Section 4 – Ressources et revenus',
+    prompt: '🔷 SECTION 4 – RESSOURCES ET REVENUS',
+  },
+  {
+    id: 'salary-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Salaires adulte 1',
+    prompt:
+      '1-3. Au cours des 12 derniers mois, avez-vous perçu un salaire ? Si oui, indiquez le montant net mensuel moyen (3 derniers mois) et précisez primes/heures supplémentaires/indemnités. Indiquez « Non » si aucun salaire.',
+  },
+  {
+    id: 'independent-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Revenus indépendants adulte 1',
+    prompt:
+      '4-6. Avez-vous des revenus d’activité indépendante ? Si oui, indiquez le chiffre d’affaires mensuel moyen et le revenu net estimé (après charges).',
+  },
+  {
+    id: 'unemployment-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Allocation chômage adulte 1',
+    prompt: '7-8. Percevez-vous une allocation chômage (ARE) ? Si oui, indiquez le montant mensuel net.',
+  },
+  {
+    id: 'social-benefits-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Prestations sociales adulte 1',
+    prompt:
+      '9-14. Détaillez les prestations sociales perçues (prime d’activité, RSA, aides logement, allocations familiales, AAH, pension d’invalidité) avec les montants mensuels, ou indiquez « Aucune ».',
+  },
+  {
+    id: 'pensions-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Pensions et rentes adulte 1',
+    prompt:
+      '15-17. Percevez-vous une pension alimentaire, une pension de retraite ou une rente/indemnité d’assurance ? Précisez les montants mensuels ou indiquez « Non ».',
+  },
+  {
+    id: 'other-resources-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Autres ressources adulte 1',
+    prompt:
+      '18-22. Avez-vous des revenus de capitaux mobiliers, des revenus locatifs, des revenus exceptionnels, une aide financière régulière d’un proche ou des activités non déclarées générant un revenu ? Précisez les montants ou indiquez « Non ».',
+  },
+  {
+    id: 'partner-resources-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Revenus du conjoint',
+    prompt:
+      'Répétez les informations précédentes pour votre conjoint(e) si vous êtes en couple (salaires, indépendants, chômage, prestations, pensions, autres ressources). Indiquez « Non applicable » si vous vivez seul(e).',
+  },
+  {
+    id: 'children-income-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Revenus des enfants',
+    prompt:
+      '23-25. L’un de vos enfants âgé de 16 ans ou plus perçoit-il un revenu ? Si oui, détaillez pour chaque enfant (type de revenu : job étudiant, apprentissage, stage rémunéré, autre + montant mensuel net) ou indiquez « Non ».',
+  },
+  {
+    id: 'resources-continue',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Continuer vers le patrimoine',
+    prompt: 'Souhaitez-vous continuer vers la section patrimoine ? (Oui / Non)',
+  },
+  {
+    id: 'section5-intro',
+    type: 'info',
+    section: 'Section 5 – Patrimoine',
+    prompt: '🔷 SECTION 5 – PATRIMOINE',
+  },
+  {
+    id: 'savings-info',
+    section: 'Section 5 – Patrimoine',
+    label: 'Épargne et placements',
+    prompt:
+      '1-3. Disposez-vous d’une épargne ou de placements financiers ? Indiquez le montant total estimé et la part bloquée/imposable le cas échéant.',
+  },
+  {
+    id: 'realestate-info',
+    section: 'Section 5 – Patrimoine',
+    label: 'Patrimoine immobilier',
+    prompt:
+      '4-7. Êtes-vous propriétaire d’un ou plusieurs biens immobiliers ? Précisez le type de bien (résidence principale, secondaire, locatif, terrain/other), s’il est loué (montant du loyer perçu) et l’existence d’un prêt immobilier en cours.',
+  },
+  {
+    id: 'capital-info',
+    section: 'Section 5 – Patrimoine',
+    label: 'Capitaux récents',
+    prompt:
+      '8. Disposez-vous d’un capital reçu récemment (héritage, indemnité, donation importante) ? Indiquez le montant et la date approximative ou « Non ».',
+  },
+  {
+    id: 'valuable-assets-info',
+    section: 'Section 5 – Patrimoine',
+    label: 'Biens de valeur',
+    prompt:
+      '9. Possédez-vous des biens de valeur importants (œuvre d’art, véhicule de collection, cryptomonnaies significatives, etc.) ? Précisez leur nature et estimation ou indiquez « Non ».',
+  },
+  {
+    id: 'patrimony-sharing-info',
+    section: 'Section 5 – Patrimoine',
+    label: 'Répartition du patrimoine',
+    prompt:
+      'Précisez si le patrimoine est commun avec votre conjoint ou s’il existe des biens propres au conjoint. Détaillez le patrimoine propre le cas échéant.',
+  },
+  {
+    id: 'final-choice',
+    section: 'Section finale – Récapitulatif et confirmation',
+    label: 'Dernier choix',
+    prompt:
+      'Souhaitez-vous vérifier vos réponses avant de lancer la simulation ou lancer directement le calcul ? (Vérifier mes réponses / Lancer directement la simulation)',
+  },
+];
 
 const formatHistoryDate = (isoString: string): string => {
   const date = new Date(isoString);
@@ -112,20 +355,7 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showGuidedAssistant, setShowGuidedAssistant] = useState(false);
 
-  const [householdAdults, setHouseholdAdults] = useState('');
-  const [adultIdentities, setAdultIdentities] = useState('');
-  const [maritalStatus, setMaritalStatus] = useState<string | null>(null);
-  const [householdChildren, setHouseholdChildren] = useState('');
-  const [childrenDetails, setChildrenDetails] = useState('');
-  const [disabilityDetails, setDisabilityDetails] = useState('');
-  const [professionalDetails, setProfessionalDetails] = useState('');
-  const [incomeDetails, setIncomeDetails] = useState('');
-  const [housingType, setHousingType] = useState<'locataire' | 'proprietaire' | 'heberge'>('locataire');
-  const [hasHousingAnswer, setHasHousingAnswer] = useState(false);
-  const [rentAmount, setRentAmount] = useState('');
-  const [selectedLifeEvents, setSelectedLifeEvents] = useState<string[]>([]);
-  const [lifeEventNotes, setLifeEventNotes] = useState('');
-  const [otherResources, setOtherResources] = useState('');
+  const [guidedAnswers, setGuidedAnswers] = useState<Record<string, string>>({});
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [currentChatStep, setCurrentChatStep] = useState(0);
@@ -135,82 +365,35 @@ export default function ChatScreen() {
 
   const chatScrollRef = useRef<ScrollView | null>(null);
 
-  const chatSteps = useMemo(
-    () => [
-      {
-        id: 'adultCount',
-        prompt: "Combien d'adultes composent votre foyer ?",
-      },
-      {
-        id: 'adultIdentities',
-        prompt:
-          "Pouvez-vous indiquer le prénom et l'âge de chaque adulte du foyer (ex : Marie 35 ans, Paul 38 ans) ?",
-      },
-      {
-        id: 'maritalStatus',
-        prompt: `Quelle est la situation matrimoniale du foyer ? (${MARITAL_STATUS_OPTIONS.map((option) => option.label).join(', ')})`,
-      },
-      {
-        id: 'childrenCount',
-        prompt: "Combien d'enfants ou de personnes à charge vivent dans le foyer ? (indiquez 0 si aucun)",
-      },
-      {
-        id: 'childrenDetails',
-        prompt:
-          `Pouvez-vous préciser les prénoms et les âges des enfants ou indiquer "aucun" si vous n'en avez pas ?`,
-      },
-      {
-        id: 'disability',
-        prompt:
-          `Certaines personnes du foyer sont-elles en situation de handicap ou reconnues par la MDPH ? (détaillez ou répondez "non")`,
-      },
-      {
-        id: 'professional',
-        prompt:
-          `Pouvez-vous décrire la situation professionnelle de chaque adulte (emploi, chômage, études, formation...) ?`,
-      },
-      {
-        id: 'income',
-        prompt:
-          `Quels sont les revenus mensuels nets du foyer (salaires, allocations, pensions, indemnités...) ?`,
-      },
-      {
-        id: 'housingType',
-        prompt: `Quel est votre statut de logement ? (${HOUSING_OPTIONS.map((option) => option.label).join(', ')})`,
-      },
-      {
-        id: 'rent',
-        prompt:
-          `Quel est le montant du loyer mensuel charges comprises ? Répondez "non applicable" si vous n'êtes pas locataire.`,
-      },
-      {
-        id: 'lifeEvents',
-        prompt: `Y a-t-il des événements de vie à signaler ? Indiquez les numéros ou les intitulés : ${LIFE_EVENT_OPTIONS.map((event, index) => `${index + 1}. ${event.label}`).join(' | ')}. Répondez "aucun" si rien à signaler.`,
-      },
-      {
-        id: 'otherResources',
-        prompt:
-          `Souhaitez-vous ajouter d'autres informations utiles (pensions alimentaires, dettes, projets...) ?`,
-      },
-    ],
-    [],
+  const chatSteps = useMemo(() => CHAT_PLAN_STEPS, []);
+
+  const appendNextPrompts = useCallback(
+    (baseMessages: ChatMessage[], startIndex: number) => {
+      const messages = [...baseMessages];
+      let index = startIndex;
+
+      while (index < chatSteps.length) {
+        const step = chatSteps[index];
+        messages.push({
+          id: `bot-${step.id}-${index}-${messages.length}`,
+          role: 'bot',
+          text: step.prompt,
+        });
+
+        if (step.type !== 'info') {
+          return { messages, nextIndex: index, finished: false } as const;
+        }
+
+        index += 1;
+      }
+
+      return { messages, nextIndex: chatSteps.length, finished: true } as const;
+    },
+    [chatSteps],
   );
 
   const resetChatAnswers = useCallback(() => {
-    setHouseholdAdults('');
-    setAdultIdentities('');
-    setMaritalStatus(null);
-    setHouseholdChildren('');
-    setChildrenDetails('');
-    setDisabilityDetails('');
-    setProfessionalDetails('');
-    setIncomeDetails('');
-    setHousingType('locataire');
-    setHasHousingAnswer(false);
-    setRentAmount('');
-    setSelectedLifeEvents([]);
-    setLifeEventNotes('');
-    setOtherResources('');
+    setGuidedAnswers({});
   }, []);
 
   const startChat = useCallback(() => {
@@ -219,20 +402,23 @@ export default function ChatScreen() {
       return;
     }
 
-    setChatMessages([
+    const introMessages: ChatMessage[] = [
       {
         id: 'bot-intro',
         role: 'bot',
         text:
-          'Bonjour ! Je vais vous poser quelques questions pour préparer une simulation OpenFisca complète.',
+          'Bonjour ! Je vais vous poser une série de questions structurées pour constituer la trame complète de votre simulation.',
       },
-      { id: `bot-${chatSteps[0].id}`, role: 'bot', text: chatSteps[0].prompt },
-    ]);
-    setCurrentChatStep(0);
+    ];
+
+    const { messages, nextIndex, finished } = appendNextPrompts(introMessages, 0);
+
+    setChatMessages(messages);
+    setCurrentChatStep(nextIndex);
     setChatInput('');
     setChatError(null);
-    setIsChatFinished(false);
-  }, [chatSteps, resetChatAnswers]);
+    setIsChatFinished(finished);
+  }, [appendNextPrompts, chatSteps.length, resetChatAnswers]);
 
   useEffect(() => {
     if (showGuidedAssistant && chatMessages.length === 0) {
@@ -315,101 +501,32 @@ export default function ChatScreen() {
   );
 
   const guidedSummary = useMemo(() => {
-    const segments: string[] = [];
+    if (!Object.keys(guidedAnswers).length) {
+      return '';
+    }
 
-    const adultCount = Number.parseInt(householdAdults, 10);
-    if (Number.isFinite(adultCount) && adultCount >= 0) {
-      if (adultCount === 0) {
-        segments.push("Le foyer ne compte pas d'adulte.");
-      } else if (adultCount === 1) {
-        segments.push("Le foyer est composé d'un adulte.");
-      } else {
-        segments.push(`Le foyer est composé de ${adultCount} adultes.`);
+    const sectionLines = new Map<string, string[]>();
+
+    chatSteps.forEach((step) => {
+      if (step.type === 'info') {
+        return;
       }
-    }
 
-    if (adultIdentities.trim().length > 0) {
-      segments.push(`Adultes : ${adultIdentities.trim()}.`);
-    }
-
-    if (maritalStatus) {
-      segments.push(`Situation matrimoniale : ${maritalStatus}.`);
-    }
-
-    const childrenCount = Number.parseInt(householdChildren, 10);
-    if (Number.isFinite(childrenCount) && childrenCount >= 0) {
-      if (childrenCount === 0) {
-        segments.push("Il n'y a pas d'enfant ou de personne à charge.");
-      } else {
-        segments.push(`Nombre d'enfants ou personnes à charge : ${childrenCount}.`);
+      const answer = guidedAnswers[step.id];
+      if (!answer || !answer.trim().length) {
+        return;
       }
-    }
 
-    if (childrenDetails.trim().length > 0) {
-      segments.push(`Détails sur les enfants : ${childrenDetails.trim()}.`);
-    }
+      const label = step.label ?? step.prompt;
+      const lines = sectionLines.get(step.section) ?? [];
+      lines.push(`${label}: ${answer.trim()}`);
+      sectionLines.set(step.section, lines);
+    });
 
-    if (disabilityDetails.trim().length > 0) {
-      const detail = disabilityDetails.trim();
-      segments.push(/[.!?…]$/.test(detail) ? detail : `${detail}.`);
-    }
-
-    if (professionalDetails.trim().length > 0) {
-      segments.push(`Situation professionnelle : ${professionalDetails.trim()}.`);
-    }
-
-    if (incomeDetails.trim().length > 0) {
-      segments.push(`Revenus mensuels : ${incomeDetails.trim()}.`);
-    }
-
-    if (hasHousingAnswer) {
-      const housingLabel = HOUSING_OPTIONS.find((option) => option.id === housingType)?.label;
-      if (housingLabel) {
-        segments.push(`Logement : ${housingLabel}.`);
-      }
-    }
-
-    if (rentAmount.trim().length > 0 && housingType === 'locataire') {
-      const formattedRent = formatCurrencyFromInput(rentAmount);
-      if (formattedRent) {
-        segments.push(`Loyer mensuel charges comprises : ${formattedRent}.`);
-      }
-    }
-
-    if (selectedLifeEvents.length > 0) {
-      const labels = LIFE_EVENT_OPTIONS.filter((event) => selectedLifeEvents.includes(event.id)).map(
-        (event) => event.label,
-      );
-      if (labels.length > 0) {
-        segments.push(`Événements de vie : ${labels.join(', ')}.`);
-      }
-    }
-
-    if (lifeEventNotes.trim().length > 0) {
-      segments.push(`Autres événements : ${lifeEventNotes.trim()}.`);
-    }
-
-    if (otherResources.trim().length > 0) {
-      segments.push(`Autres informations : ${otherResources.trim()}.`);
-    }
-
-    return segments.join(' ').trim();
-  }, [
-    adultIdentities,
-    disabilityDetails,
-    hasHousingAnswer,
-    householdAdults,
-    householdChildren,
-    housingType,
-    incomeDetails,
-    lifeEventNotes,
-    maritalStatus,
-    otherResources,
-    professionalDetails,
-    rentAmount,
-    selectedLifeEvents,
-    childrenDetails,
-  ]);
+    return Array.from(sectionLines.entries())
+      .map(([sectionTitle, lines]) => `${sectionTitle}\n${lines.map((line) => `• ${line}`).join('\n')}`)
+      .join('\n\n');
+  }, [chatSteps, guidedAnswers]);
 
   const handleApplyGuidedSummary = useCallback(() => {
     if (!guidedSummary.trim().length) {
@@ -425,7 +542,7 @@ export default function ChatScreen() {
     }
 
     const step = chatSteps[currentChatStep];
-    if (!step) {
+    if (!step || step.type === 'info') {
       return;
     }
 
@@ -435,241 +552,37 @@ export default function ChatScreen() {
       return;
     }
 
-    const normalizedAnswer = normalizeText(rawAnswer);
+    const userMessage: ChatMessage = { id: `user-${Date.now()}-${currentChatStep}`, role: 'user', text: rawAnswer };
+    const messagesAfterReply = [...chatMessages, userMessage];
 
-    switch (step.id) {
-      case 'adultCount': {
-        const value = Number.parseInt(rawAnswer, 10);
-        if (!Number.isFinite(value) || value <= 0) {
-          setChatError("Indiquez un nombre d'adultes valide (ex : 1, 2...).");
-          return;
-        }
-        setHouseholdAdults(String(value));
-        break;
-      }
-      case 'adultIdentities': {
-        setAdultIdentities(rawAnswer);
-        break;
-      }
-      case 'maritalStatus': {
-        const matched = MARITAL_STATUS_OPTIONS.find((option) => {
-          const normalizedLabel = normalizeText(option.label);
-          return (
-            normalizedLabel === normalizedAnswer ||
-            normalizedLabel.includes(normalizedAnswer) ||
-            normalizedAnswer.includes(normalizedLabel)
-          );
-        });
+    setGuidedAnswers((current) => ({
+      ...current,
+      [step.id]: rawAnswer,
+    }));
 
-        if (!matched) {
-          setChatError("Choisissez parmi les situations proposées (célibataire, en couple, marié...).");
-          return;
-        }
+    const { messages, nextIndex, finished } = appendNextPrompts(
+      messagesAfterReply,
+      currentChatStep + 1,
+    );
 
-        setMaritalStatus(matched.label);
-        break;
-      }
-      case 'childrenCount': {
-        const value = Number.parseInt(rawAnswer, 10);
-        if (!Number.isFinite(value) || value < 0) {
-          setChatError("Indiquez un nombre d'enfants valide (0, 1, 2...).");
-          return;
-        }
-        setHouseholdChildren(String(value));
-        if (value === 0) {
-          setChildrenDetails('');
-        }
-        break;
-      }
-      case 'childrenDetails': {
-        if (
-          normalizedAnswer === 'aucun' ||
-          normalizedAnswer === 'aucune' ||
-          normalizedAnswer === 'non' ||
-          normalizedAnswer === '0'
-        ) {
-          setChildrenDetails('');
-        } else {
-          setChildrenDetails(rawAnswer);
-        }
-        break;
-      }
-      case 'disability': {
-        if (
-          normalizedAnswer === 'non' ||
-          normalizedAnswer === 'aucun' ||
-          normalizedAnswer === 'aucune' ||
-          normalizedAnswer.includes('pas')
-        ) {
-          setDisabilityDetails("Personne dans le foyer n'est en situation de handicap ou reconnue par la MDPH.");
-        } else {
-          setDisabilityDetails(rawAnswer);
-        }
-        break;
-      }
-      case 'professional': {
-        setProfessionalDetails(rawAnswer);
-        break;
-      }
-      case 'income': {
-        setIncomeDetails(rawAnswer);
-        break;
-      }
-      case 'housingType': {
-        const matched = HOUSING_OPTIONS.find((option) => {
-          const normalizedLabel = normalizeText(option.label);
-          const normalizedId = normalizeText(option.id);
-          return (
-            normalizedLabel === normalizedAnswer ||
-            normalizedId === normalizedAnswer ||
-            normalizedAnswer.includes(normalizedLabel) ||
-            normalizedAnswer.includes(normalizedId)
-          );
-        });
+    const finalMessages = finished
+      ? [
+          ...messages,
+          {
+            id: `bot-finish-${Date.now()}`,
+            role: 'bot',
+            text:
+              'Merci pour toutes ces précisions. Consultez le résumé généré ci-dessous puis cliquez sur « Utiliser ce résumé ».',
+          },
+        ]
+      : messages;
 
-        if (!matched) {
-          setChatError('Indiquez si vous êtes locataire, propriétaire ou hébergé gratuitement.');
-          return;
-        }
-
-        setHousingType(matched.id);
-        setHasHousingAnswer(true);
-        break;
-      }
-      case 'rent': {
-        if (
-          normalizedAnswer === 'non' ||
-          normalizedAnswer === 'non applicable' ||
-          normalizedAnswer === 'aucun' ||
-          normalizedAnswer === '0' ||
-          normalizedAnswer === 'zero'
-        ) {
-          setRentAmount('');
-        } else {
-          setRentAmount(rawAnswer);
-        }
-        break;
-      }
-      case 'lifeEvents': {
-        if (
-          normalizedAnswer === 'aucun' ||
-          normalizedAnswer === 'aucune' ||
-          normalizedAnswer === 'non' ||
-          normalizedAnswer === 'rien'
-        ) {
-          setSelectedLifeEvents([]);
-          setLifeEventNotes('');
-          break;
-        }
-
-        const tokens = rawAnswer
-          .split(/[;,/]/)
-          .map((token) => token.trim())
-          .filter((token) => token.length > 0);
-
-        if (tokens.length === 0) {
-          setSelectedLifeEvents([]);
-          setLifeEventNotes('');
-          break;
-        }
-
-        const recognized = new Set<string>();
-        const unknown: string[] = [];
-
-        tokens.forEach((token) => {
-          const normalizedToken = normalizeText(token);
-          const asIndex = Number.parseInt(normalizedToken, 10);
-          if (
-            Number.isFinite(asIndex) &&
-            asIndex > 0 &&
-            asIndex <= LIFE_EVENT_OPTIONS.length
-          ) {
-            recognized.add(LIFE_EVENT_OPTIONS[asIndex - 1].id);
-            return;
-          }
-
-          const byId = LIFE_EVENT_OPTIONS.find((event) => normalizeText(event.id) === normalizedToken);
-          if (byId) {
-            recognized.add(byId.id);
-            return;
-          }
-
-          const byLabel = LIFE_EVENT_OPTIONS.find((event) =>
-            normalizeText(event.label).includes(normalizedToken) ||
-            normalizedToken.includes(normalizeText(event.label)),
-          );
-
-          if (byLabel) {
-            recognized.add(byLabel.id);
-            return;
-          }
-
-          unknown.push(token);
-        });
-
-        const recognizedArray = Array.from(recognized);
-        if (recognizedArray.length === 0) {
-          setSelectedLifeEvents([]);
-          setLifeEventNotes(rawAnswer);
-        } else {
-          setSelectedLifeEvents(recognizedArray);
-          setLifeEventNotes(unknown.join(', '));
-        }
-        break;
-      }
-      case 'otherResources': {
-        if (
-          normalizedAnswer === 'non' ||
-          normalizedAnswer === 'aucun' ||
-          normalizedAnswer === 'aucune' ||
-          normalizedAnswer === 'rien'
-        ) {
-          setOtherResources('');
-        } else {
-          setOtherResources(rawAnswer);
-        }
-        break;
-      }
-      default: {
-        break;
-      }
-    }
-
-    const nextStepIndex = currentChatStep + 1;
-
-    setChatMessages((current) => {
-      const updated: ChatMessage[] = [
-        ...current,
-        { id: `user-${Date.now()}`, role: 'user', text: rawAnswer },
-      ];
-
-      if (nextStepIndex < chatSteps.length) {
-        const nextStep = chatSteps[nextStepIndex];
-        updated.push({
-          id: `bot-${nextStep.id}-${Date.now()}`,
-          role: 'bot',
-          text: nextStep.prompt,
-        });
-      } else {
-        updated.push({
-          id: 'bot-finish',
-          role: 'bot',
-          text:
-            'Merci pour toutes ces précisions. Consultez le résumé généré ci-dessous puis cliquez sur « Utiliser ce résumé ».',
-        });
-      }
-
-      return updated;
-    });
-
-    setCurrentChatStep(nextStepIndex);
+    setChatMessages(finalMessages);
+    setCurrentChatStep(nextIndex);
     setChatInput('');
     setChatError(null);
-
-    if (nextStepIndex >= chatSteps.length) {
-      setIsChatFinished(true);
-    }
-  }, [chatInput, chatSteps, currentChatStep, isChatFinished]);
+    setIsChatFinished(finished);
+  }, [appendNextPrompts, chatInput, chatMessages, chatSteps, currentChatStep, isChatFinished]);
 
   const handleChatRestart = useCallback(() => {
     startChat();

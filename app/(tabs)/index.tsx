@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -39,127 +39,6 @@ const LIFE_EVENT_OPTIONS = [
   { id: 'student', label: 'Étudiant' },
 ];
 
-const YES_NO_OPTIONS = ['oui', 'non'] as const;
-
-const PROFESSIONAL_STATUS_OPTIONS = [
-  { id: 'salarie', label: 'salarié' },
-  { id: 'profession-liberale', label: 'profession libérale, entrepreneur' },
-  { id: 'responsable-exploitation', label: "responsable d'exploitation agricole" },
-  { id: 'micro-entrepreneur', label: 'micro-entrepreneur' },
-  { id: 'auto-entrepreneur', label: 'auto-entrepreneur' },
-  { id: 'apprenti', label: 'apprenti' },
-  { id: 'stagiaire-hors-formation', label: 'stagiaire hors formation professionnelle' },
-  { id: 'stagiaire-formation', label: 'stagiaire de formation professionnelle' },
-  { id: 'boursier-sup', label: "boursier de l'enseignement supérieur" },
-  { id: 'boursier-recherche', label: 'boursier de recherche' },
-  { id: 'chomage-partiel', label: 'salarié en chômage partiel ou technique' },
-  { id: 'demandeur-emploi', label: "demandeur d'emploi indemnisé" },
-  { id: 'prime-activite', label: "bénéficiaire de la prime d'activité" },
-  {
-    id: 'allocation-securisation',
-    label: "bénéficiaire de l'allocation de sécurisation professionnelle",
-  },
-  {
-    id: 'indemnite-licenciement',
-    label: "bénéficiaire d'une indemnité de licenciement, rupture, fin de CDD, congés payés...",
-  },
-  {
-    id: 'prime-reprise-activite',
-    label: "bénéficiaire d'une prime forfaitaire mensuelle pour la reprise d'activité",
-  },
-  {
-    id: 'adefip',
-    label: "bénéficiaire de l'Aide départementale Financière d'Insertion Personnalisée (AdeFIP)",
-  },
-  { id: 'pre-retraite', label: 'pré-retraité' },
-] as const;
-
-const INCOME_GROUPS = [
-  {
-    id: 'activity',
-    label: "Revenus d'activité",
-    options: [
-      { id: 'salaires', label: 'salaires, primes, heures supplémentaires' },
-      { id: 'independants', label: 'revenus des indépendants (BIC/BNC)' },
-      { id: 'agricoles', label: 'revenus agricoles' },
-      { id: 'micro-ca', label: 'chiffre d’affaires micro-entrepreneur' },
-    ],
-  },
-  {
-    id: 'indemnities',
-    label: 'Indemnités',
-    options: [
-      { id: 'maladie', label: 'indemnités journalières maladie' },
-      { id: 'maternite', label: 'indemnités journalières maternité, paternité ou adoption' },
-      { id: 'accident-travail', label: 'indemnités maladie professionnelle ou accident du travail' },
-      { id: 'volontariat', label: 'indemnités de volontariat' },
-      {
-        id: 'travailleur-independant',
-        label: 'indemnités journalières travailleur indépendant et exploitant agricole',
-      },
-      { id: 'amiante', label: 'indemnisations pour victimes de l’amiante' },
-    ],
-  },
-  {
-    id: 'pensions',
-    label: 'Pensions ou rentes',
-    options: [
-      { id: 'invalidite', label: "pension d'invalidité" },
-      { id: 'retraite', label: 'pension (retraite, réversion, de combattant) ou rente' },
-      { id: 'accident-travail-rente', label: 'rente accident du travail, ATEXA' },
-    ],
-  },
-  {
-    id: 'pensions-alimentaires',
-    label: 'Pensions alimentaires, charges et frais',
-    options: [
-      { id: 'alimentaires-recues', label: 'pensions alimentaires reçues' },
-      { id: 'alimentaires-versees', label: 'pensions alimentaires versées' },
-      { id: 'prestations-compensatoires', label: 'prestations compensatoires reçues' },
-      { id: 'autres-charges', label: 'autres charges à déduire du revenu' },
-      { id: 'frais-deductibles', label: 'frais déductibles' },
-    ],
-  },
-  {
-    id: 'allocations',
-    label: 'Allocations',
-    options: [
-      { id: 'allocations-familiales', label: 'allocations familiales' },
-      { id: 'complement-familial', label: 'complément familial' },
-      { id: 'allocation-soutien', label: 'allocation de soutien familial' },
-      { id: 'cmg', label: 'complément de libre choix mode de garde (CMG)' },
-      { id: 'paje-base', label: "prestation d'accueil du jeune enfant (PAJE) - Allocation de base" },
-      { id: 'prepare', label: "prestation partagée d'éducation de l'enfant (PREPARE)" },
-      { id: 'allocations-logement', label: 'allocations logement' },
-      { id: 'aeeh', label: "allocation d'éducation de l'enfant handicapé (AEEH)" },
-      { id: 'allocation-ressources', label: 'allocation de ressources (CR)' },
-      { id: 'mva', label: 'majoration pour la vie autonome (MVA)' },
-      { id: 'pch', label: 'prestation de compensation du handicap (PCH)' },
-      { id: 'rsa', label: 'revenu de solidarité active (RSA)' },
-      { id: 'aspa', label: 'allocation de solidarité aux personnes âgées (ASPA)' },
-      { id: 'apa', label: 'allocation personnalisée d’autonomie à domicile (APA)' },
-      { id: 'asi', label: 'allocation supplémentaire d’invalidité (ASI)' },
-    ],
-  },
-  {
-    id: 'patrimonial',
-    label: 'Revenus patrimoniaux ou gains',
-    options: [
-      { id: 'revenus-locatifs', label: 'revenus locatifs (terrains, appartements, SCI, ...)' },
-      { id: 'revenus-capital', label: 'revenus du capital (intérêts, plus-values, dividendes, ...)' },
-      {
-        id: 'plus-values',
-        label: 'montant des plus-values utilisé pour le montant total de revenus du capital',
-      },
-      { id: 'gains-exceptionnels', label: 'gains exceptionnels (dons, gains aux jeux, héritage)' },
-    ],
-  },
-] as const satisfies ReadonlyArray<{
-  id: string;
-  label: string;
-  options: ReadonlyArray<{ id: string; label: string }>;
-}>;
-
 const HOUSING_OPTIONS: Array<{
   id: 'locataire' | 'proprietaire' | 'heberge';
   label: string;
@@ -169,32 +48,27 @@ const HOUSING_OPTIONS: Array<{
   { id: 'heberge', label: 'Hébergé gratuitement' },
 ];
 
-type IncomeSelection = Record<string, Record<string, string>>;
+const MARITAL_STATUS_OPTIONS = [
+  { id: 'single', label: 'célibataire' },
+  { id: 'couple', label: 'en couple' },
+  { id: 'married', label: 'marié(e)' },
+  { id: 'pacsed', label: 'pacsé(e)' },
+  { id: 'separated', label: 'séparé(e) ou divorcé(e)' },
+  { id: 'widowed', label: 'veuf/veuve' },
+] as const;
 
-const createEmptyIncomeSelection = (): IncomeSelection => {
-  return INCOME_GROUPS.reduce<IncomeSelection>((acc, group) => {
-    acc[group.id] = {};
-    return acc;
-  }, {});
+type ChatMessage = {
+  id: string;
+  role: 'bot' | 'user';
+  text: string;
 };
 
-type AdultSituation = {
-  mdphRecognition: 'oui' | 'non' | null;
-  hasRqth: 'oui' | 'non' | null;
-  perceivesAah: 'oui' | 'non' | null;
-  aahAmount: string;
-  employmentStatuses: string[];
-  incomes: IncomeSelection;
-};
-
-const createEmptyAdultSituation = (): AdultSituation => ({
-  mdphRecognition: null,
-  hasRqth: null,
-  perceivesAah: null,
-  aahAmount: '',
-  employmentStatuses: [],
-  incomes: createEmptyIncomeSelection(),
-});
+const normalizeText = (value: string): string =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
 
 const formatCurrencyFromInput = (rawValue: string): string | null => {
   const sanitized = rawValue.replace(/[^0-9,.-]/g, '').replace(',', '.');
@@ -237,54 +111,147 @@ export default function ChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showGuidedAssistant, setShowGuidedAssistant] = useState(false);
-  const [householdAdults, setHouseholdAdults] = useState('1');
-  const [householdChildren, setHouseholdChildren] = useState('0');
-  const [disabledChildrenCount, setDisabledChildrenCount] = useState('');
-  const [disabledChildrenDetails, setDisabledChildrenDetails] = useState('');
-  const [childrenMdphRecognition, setChildrenMdphRecognition] = useState<'oui' | 'non' | null>(null);
-  const [disabledAdultsCount, setDisabledAdultsCount] = useState('');
-  const [adultSituations, setAdultSituations] = useState<AdultSituation[]>([
-    createEmptyAdultSituation(),
-  ]);
+
+  const [householdAdults, setHouseholdAdults] = useState('');
+  const [adultIdentities, setAdultIdentities] = useState('');
+  const [maritalStatus, setMaritalStatus] = useState<string | null>(null);
+  const [householdChildren, setHouseholdChildren] = useState('');
+  const [childrenDetails, setChildrenDetails] = useState('');
+  const [disabilityDetails, setDisabilityDetails] = useState('');
+  const [professionalDetails, setProfessionalDetails] = useState('');
+  const [incomeDetails, setIncomeDetails] = useState('');
   const [housingType, setHousingType] = useState<'locataire' | 'proprietaire' | 'heberge'>('locataire');
+  const [hasHousingAnswer, setHasHousingAnswer] = useState(false);
   const [rentAmount, setRentAmount] = useState('');
-  const [otherResources, setOtherResources] = useState('');
   const [selectedLifeEvents, setSelectedLifeEvents] = useState<string[]>([]);
-  const [historyEntries, setHistoryEntries] = useState<SimulationHistoryEntry[]>([]);
-  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [lifeEventNotes, setLifeEventNotes] = useState('');
+  const [otherResources, setOtherResources] = useState('');
 
-  useEffect(() => {
-    const parsedAdults = Number.parseInt(householdAdults, 10);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [currentChatStep, setCurrentChatStep] = useState(0);
+  const [chatInput, setChatInput] = useState('');
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [isChatFinished, setIsChatFinished] = useState(false);
 
-    if (!Number.isFinite(parsedAdults) || parsedAdults <= 0) {
-      setAdultSituations([]);
+  const chatScrollRef = useRef<ScrollView | null>(null);
+
+  const chatSteps = useMemo(
+    () => [
+      {
+        id: 'adultCount',
+        prompt: "Combien d'adultes composent votre foyer ?",
+      },
+      {
+        id: 'adultIdentities',
+        prompt:
+          "Pouvez-vous indiquer le prénom et l'âge de chaque adulte du foyer (ex : Marie 35 ans, Paul 38 ans) ?",
+      },
+      {
+        id: 'maritalStatus',
+        prompt: `Quelle est la situation matrimoniale du foyer ? (${MARITAL_STATUS_OPTIONS.map((option) => option.label).join(', ')})`,
+      },
+      {
+        id: 'childrenCount',
+        prompt: "Combien d'enfants ou de personnes à charge vivent dans le foyer ? (indiquez 0 si aucun)",
+      },
+      {
+        id: 'childrenDetails',
+        prompt:
+          `Pouvez-vous préciser les prénoms et les âges des enfants ou indiquer "aucun" si vous n'en avez pas ?`,
+      },
+      {
+        id: 'disability',
+        prompt:
+          `Certaines personnes du foyer sont-elles en situation de handicap ou reconnues par la MDPH ? (détaillez ou répondez "non")`,
+      },
+      {
+        id: 'professional',
+        prompt:
+          `Pouvez-vous décrire la situation professionnelle de chaque adulte (emploi, chômage, études, formation...) ?`,
+      },
+      {
+        id: 'income',
+        prompt:
+          `Quels sont les revenus mensuels nets du foyer (salaires, allocations, pensions, indemnités...) ?`,
+      },
+      {
+        id: 'housingType',
+        prompt: `Quel est votre statut de logement ? (${HOUSING_OPTIONS.map((option) => option.label).join(', ')})`,
+      },
+      {
+        id: 'rent',
+        prompt:
+          `Quel est le montant du loyer mensuel charges comprises ? Répondez "non applicable" si vous n'êtes pas locataire.`,
+      },
+      {
+        id: 'lifeEvents',
+        prompt: `Y a-t-il des événements de vie à signaler ? Indiquez les numéros ou les intitulés : ${LIFE_EVENT_OPTIONS.map((event, index) => `${index + 1}. ${event.label}`).join(' | ')}. Répondez "aucun" si rien à signaler.`,
+      },
+      {
+        id: 'otherResources',
+        prompt:
+          `Souhaitez-vous ajouter d'autres informations utiles (pensions alimentaires, dettes, projets...) ?`,
+      },
+    ],
+    [],
+  );
+
+  const resetChatAnswers = useCallback(() => {
+    setHouseholdAdults('');
+    setAdultIdentities('');
+    setMaritalStatus(null);
+    setHouseholdChildren('');
+    setChildrenDetails('');
+    setDisabilityDetails('');
+    setProfessionalDetails('');
+    setIncomeDetails('');
+    setHousingType('locataire');
+    setHasHousingAnswer(false);
+    setRentAmount('');
+    setSelectedLifeEvents([]);
+    setLifeEventNotes('');
+    setOtherResources('');
+  }, []);
+
+  const startChat = useCallback(() => {
+    resetChatAnswers();
+    if (chatSteps.length === 0) {
       return;
     }
 
-    setAdultSituations((current) => {
-      if (current.length === parsedAdults) {
-        return current;
-      }
+    setChatMessages([
+      {
+        id: 'bot-intro',
+        role: 'bot',
+        text:
+          'Bonjour ! Je vais vous poser quelques questions pour préparer une simulation OpenFisca complète.',
+      },
+      { id: `bot-${chatSteps[0].id}`, role: 'bot', text: chatSteps[0].prompt },
+    ]);
+    setCurrentChatStep(0);
+    setChatInput('');
+    setChatError(null);
+    setIsChatFinished(false);
+  }, [chatSteps, resetChatAnswers]);
 
-      if (current.length > parsedAdults) {
-        return current.slice(0, parsedAdults);
-      }
+  useEffect(() => {
+    if (showGuidedAssistant && chatMessages.length === 0) {
+      startChat();
+    }
+  }, [showGuidedAssistant, chatMessages.length, startChat]);
 
-      return [
-        ...current,
-        ...Array.from({ length: parsedAdults - current.length }, () =>
-          createEmptyAdultSituation(),
-        ),
-      ];
-    });
-  }, [householdAdults]);
+  useEffect(() => {
+    if (!chatScrollRef.current) {
+      return;
+    }
+
+    chatScrollRef.current.scrollToEnd({ animated: true });
+  }, [chatMessages]);
 
   const { generateEndpoint, simulateEndpoint } = useMemo(() => {
     const defaultBaseUrl = 'https://facilaide-plus-backend.onrender.com';
     const configBaseUrl =
-      (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)
-        ?.apiBaseUrl ??
+      (Constants.expoConfig?.extra as { apiBaseUrl?: string } | undefined)?.apiBaseUrl ??
       process.env.EXPO_PUBLIC_API_BASE_URL ??
       defaultBaseUrl;
 
@@ -297,6 +264,10 @@ export default function ChatScreen() {
     } as const;
   }, []);
 
+  const [historyEntries, setHistoryEntries] = useState<SimulationHistoryEntry[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
   const refreshHistory = useCallback(async () => {
     setIsHistoryLoading(true);
     try {
@@ -304,7 +275,7 @@ export default function ChatScreen() {
       setHistoryEntries(entries);
       setHistoryError(null);
     } catch (historyLoadError) {
-      console.warn('Erreur lors du chargement de l\'historique', historyLoadError);
+      console.warn("Erreur lors du chargement de l'historique", historyLoadError);
       setHistoryError("Impossible de charger l'historique des simulations.");
     } finally {
       setIsHistoryLoading(false);
@@ -324,7 +295,7 @@ export default function ChatScreen() {
             setHistoryError(null);
           }
         } catch (historyLoadError) {
-          console.warn('Erreur lors du chargement de l\'historique', historyLoadError);
+          console.warn("Erreur lors du chargement de l'historique", historyLoadError);
           if (isActive) {
             setHistoryError("Impossible de charger l'historique des simulations.");
           }
@@ -343,338 +314,101 @@ export default function ChatScreen() {
     }, []),
   );
 
-  const toggleLifeEvent = useCallback((eventId: string) => {
-    setSelectedLifeEvents((previous) => {
-      if (previous.includes(eventId)) {
-        return previous.filter((value) => value !== eventId);
-      }
-      return [...previous, eventId];
-    });
-  }, []);
-
-  const setAdultSituationField = useCallback(
-    (
-      adultIndex: number,
-      field: keyof AdultSituation,
-      value: AdultSituation[keyof AdultSituation],
-    ) => {
-      setAdultSituations((current) => {
-        if (adultIndex < 0 || adultIndex >= current.length) {
-          return current;
-        }
-
-        const next = [...current];
-        const updatedAdult: AdultSituation = { ...next[adultIndex], [field]: value };
-
-        if (field === 'perceivesAah' && value !== 'oui') {
-          updatedAdult.aahAmount = '';
-        }
-
-        next[adultIndex] = updatedAdult;
-        return next;
-      });
-    },
-    [],
-  );
-
-  const toggleAdultEmploymentStatus = useCallback((adultIndex: number, statusId: string) => {
-    setAdultSituations((current) => {
-      if (adultIndex < 0 || adultIndex >= current.length) {
-        return current;
-      }
-
-      const next = [...current];
-      const adult = next[adultIndex];
-      const currentStatuses = adult.employmentStatuses;
-      const hasStatus = currentStatuses.includes(statusId);
-      const updatedStatuses = hasStatus
-        ? currentStatuses.filter((id) => id !== statusId)
-        : [...currentStatuses, statusId];
-
-      next[adultIndex] = { ...adult, employmentStatuses: updatedStatuses };
-      return next;
-    });
-  }, []);
-
-  const toggleAdultIncomeOption = useCallback(
-    (adultIndex: number, groupId: string, optionId: string) => {
-      setAdultSituations((current) => {
-        if (adultIndex < 0 || adultIndex >= current.length) {
-          return current;
-        }
-
-        const next = [...current];
-        const adult = next[adultIndex];
-        const currentGroup = adult.incomes[groupId] ?? {};
-        const updatedGroup = { ...currentGroup };
-
-        if (optionId in updatedGroup) {
-          delete updatedGroup[optionId];
-        } else {
-          updatedGroup[optionId] = '';
-        }
-
-        next[adultIndex] = {
-          ...adult,
-          incomes: {
-            ...adult.incomes,
-            [groupId]: updatedGroup,
-          },
-        };
-
-        return next;
-      });
-    },
-    [],
-  );
-
-  const setAdultIncomeAmount = useCallback(
-    (adultIndex: number, groupId: string, optionId: string, amount: string) => {
-      setAdultSituations((current) => {
-        if (adultIndex < 0 || adultIndex >= current.length) {
-          return current;
-        }
-
-        const next = [...current];
-        const adult = next[adultIndex];
-        const currentGroup = adult.incomes[groupId] ?? {};
-
-        if (!(optionId in currentGroup)) {
-          return current;
-        }
-
-        const updatedGroup = {
-          ...currentGroup,
-          [optionId]: amount,
-        };
-
-        next[adultIndex] = {
-          ...adult,
-          incomes: {
-            ...adult.incomes,
-            [groupId]: updatedGroup,
-          },
-        };
-
-        return next;
-      });
-    },
-    [],
-  );
-
   const guidedSummary = useMemo(() => {
     const segments: string[] = [];
 
-    const adultsCount = Number.parseInt(householdAdults, 10);
-    const childrenCount = Number.parseInt(householdChildren, 10);
-    if (Number.isFinite(adultsCount) && adultsCount > 0) {
-      segments.push(
-        adultsCount === 1 ? 'Je vis seul(e).' : `Nous sommes ${adultsCount} adultes dans le foyer.`,
-      );
+    const adultCount = Number.parseInt(householdAdults, 10);
+    if (Number.isFinite(adultCount) && adultCount >= 0) {
+      if (adultCount === 0) {
+        segments.push("Le foyer ne compte pas d'adulte.");
+      } else if (adultCount === 1) {
+        segments.push("Le foyer est composé d'un adulte.");
+      } else {
+        segments.push(`Le foyer est composé de ${adultCount} adultes.`);
+      }
     }
 
+    if (adultIdentities.trim().length > 0) {
+      segments.push(`Adultes : ${adultIdentities.trim()}.`);
+    }
+
+    if (maritalStatus) {
+      segments.push(`Situation matrimoniale : ${maritalStatus}.`);
+    }
+
+    const childrenCount = Number.parseInt(householdChildren, 10);
     if (Number.isFinite(childrenCount) && childrenCount >= 0) {
       if (childrenCount === 0) {
-        segments.push("Je n'ai pas d'enfant à charge.");
-      } else if (childrenCount === 1) {
-        segments.push("J'ai un enfant à charge.");
+        segments.push("Il n'y a pas d'enfant ou de personne à charge.");
       } else {
-        segments.push(`J'ai ${childrenCount} enfants à charge.`);
+        segments.push(`Nombre d'enfants ou personnes à charge : ${childrenCount}.`);
       }
     }
 
-    const disabledChildrenValue = Number.parseInt(disabledChildrenCount, 10);
-    if (Number.isFinite(disabledChildrenValue) && disabledChildrenValue >= 0) {
-      if (disabledChildrenValue === 0) {
-        segments.push("Aucun enfant n'est en situation de handicap dans le foyer.");
-      } else if (disabledChildrenValue === 1) {
-        segments.push("Un enfant du foyer est en situation de handicap.");
-      } else {
-        segments.push(`${disabledChildrenValue} enfants du foyer sont en situation de handicap.`);
+    if (childrenDetails.trim().length > 0) {
+      segments.push(`Détails sur les enfants : ${childrenDetails.trim()}.`);
+    }
+
+    if (disabilityDetails.trim().length > 0) {
+      const detail = disabilityDetails.trim();
+      segments.push(/[.!?…]$/.test(detail) ? detail : `${detail}.`);
+    }
+
+    if (professionalDetails.trim().length > 0) {
+      segments.push(`Situation professionnelle : ${professionalDetails.trim()}.`);
+    }
+
+    if (incomeDetails.trim().length > 0) {
+      segments.push(`Revenus mensuels : ${incomeDetails.trim()}.`);
+    }
+
+    if (hasHousingAnswer) {
+      const housingLabel = HOUSING_OPTIONS.find((option) => option.id === housingType)?.label;
+      if (housingLabel) {
+        segments.push(`Logement : ${housingLabel}.`);
       }
     }
 
-    if (childrenMdphRecognition === 'oui') {
-      segments.push('Les enfants concernés sont reconnus par la MDPH.');
-    } else if (childrenMdphRecognition === 'non') {
-      segments.push("Les enfants concernés ne sont pas reconnus par la MDPH.");
-    }
-
-    if (disabledChildrenDetails.trim().length > 0) {
-      segments.push(disabledChildrenDetails.trim());
-    }
-
-    const disabledAdultsValue = Number.parseInt(disabledAdultsCount, 10);
-    if (Number.isFinite(disabledAdultsValue) && disabledAdultsValue >= 0) {
-      if (disabledAdultsValue === 0) {
-        segments.push("Aucun adulte du foyer n'est en situation de handicap.");
-      } else if (disabledAdultsValue === 1) {
-        segments.push('Un adulte du foyer est en situation de handicap.');
-      } else {
-        segments.push(`${disabledAdultsValue} adultes du foyer sont en situation de handicap.`);
+    if (rentAmount.trim().length > 0 && housingType === 'locataire') {
+      const formattedRent = formatCurrencyFromInput(rentAmount);
+      if (formattedRent) {
+        segments.push(`Loyer mensuel charges comprises : ${formattedRent}.`);
       }
     }
 
-    const adultCount = adultSituations.length;
-    const mdphYesCount = adultSituations.filter((adult) => adult.mdphRecognition === 'oui').length;
-    const mdphNoCount = adultSituations.filter((adult) => adult.mdphRecognition === 'non').length;
-
-    if (mdphYesCount > 0) {
-      if (adultCount === 1) {
-        segments.push("L'adulte du foyer est reconnu par la MDPH.");
-      } else if (mdphYesCount === adultCount) {
-        segments.push('Les adultes concernés sont reconnus par la MDPH.');
-      } else if (mdphYesCount === 1) {
-        segments.push('Un adulte du foyer est reconnu par la MDPH.');
-      } else {
-        segments.push(`${mdphYesCount} adultes du foyer sont reconnus par la MDPH.`);
+    if (selectedLifeEvents.length > 0) {
+      const labels = LIFE_EVENT_OPTIONS.filter((event) => selectedLifeEvents.includes(event.id)).map(
+        (event) => event.label,
+      );
+      if (labels.length > 0) {
+        segments.push(`Événements de vie : ${labels.join(', ')}.`);
       }
-    } else if (mdphNoCount === adultCount && adultCount > 0) {
-      segments.push("Aucun adulte du foyer n'est reconnu par la MDPH.");
     }
 
-    const rqthYesCount = adultSituations.filter((adult) => adult.hasRqth === 'oui').length;
-    const rqthNoCount = adultSituations.filter((adult) => adult.hasRqth === 'non').length;
-
-    if (rqthYesCount > 0) {
-      if (adultCount === 1) {
-        segments.push("L'adulte du foyer est titulaire d'une RQTH.");
-      } else if (rqthYesCount === adultCount) {
-        segments.push("Tous les adultes du foyer sont titulaires d'une RQTH.");
-      } else if (rqthYesCount === 1) {
-        segments.push("Un adulte du foyer est titulaire d'une RQTH.");
-      } else {
-        segments.push(`${rqthYesCount} adultes du foyer sont titulaires d'une RQTH.`);
-      }
-    } else if (rqthNoCount === adultCount && adultCount > 0) {
-      segments.push("Personne dans le foyer n'est titulaire d'une RQTH.");
-    }
-
-    const adultsWithAah = adultSituations
-      .map((adult, index) => ({ adult, index }))
-      .filter(({ adult }) => adult.perceivesAah === 'oui');
-
-    if (adultsWithAah.length > 0) {
-      if (adultCount === 1) {
-        segments.push("L'adulte du foyer perçoit l'AAH.");
-      } else if (adultsWithAah.length === adultCount) {
-        segments.push("Tous les adultes du foyer perçoivent l'AAH.");
-      } else if (adultsWithAah.length === 1) {
-        segments.push("Un adulte du foyer perçoit l'AAH.");
-      } else {
-        segments.push(`${adultsWithAah.length} adultes du foyer perçoivent l'AAH.`);
-      }
-
-      adultsWithAah.forEach(({ adult, index }) => {
-        const formattedAah = formatCurrencyFromInput(adult.aahAmount);
-        if (!formattedAah) {
-          return;
-        }
-
-        if (adultCount === 1) {
-          segments.push(`Le montant mensuel de l'AAH est d'environ ${formattedAah}.`);
-        } else {
-          segments.push(`L'adulte ${index + 1} perçoit environ ${formattedAah} d'AAH par mois.`);
-        }
-      });
-    } else if (
-      adultCount > 0 &&
-      adultSituations.every((adult) => adult.perceivesAah === 'non')
-    ) {
-      segments.push("Personne ne perçoit l'AAH dans le foyer.");
-    }
-
-    adultSituations.forEach((adult, index) => {
-      const statusLabels = adult.employmentStatuses
-        .map((statusId) =>
-          PROFESSIONAL_STATUS_OPTIONS.find((option) => option.id === statusId)?.label,
-        )
-        .filter((label): label is string => Boolean(label));
-
-      if (statusLabels.length > 0) {
-        if (adultCount === 1) {
-          segments.push(`Ma situation professionnelle : ${statusLabels.join(', ')}.`);
-        } else {
-          segments.push(
-            `L'adulte ${index + 1} a pour situation professionnelle : ${statusLabels.join(', ')}.`,
-          );
-        }
-      }
-
-      INCOME_GROUPS.forEach((group) => {
-        const groupIncomes = adult.incomes[group.id];
-        if (!groupIncomes) {
-          return;
-        }
-
-        Object.entries(groupIncomes).forEach(([optionId, amount]) => {
-          const optionLabel = group.options.find((option) => option.id === optionId)?.label;
-          if (!optionLabel) {
-            return;
-          }
-
-          const formattedAmount = formatCurrencyFromInput(amount);
-
-          if (adultCount === 1) {
-            segments.push(
-              formattedAmount
-                ? `Je perçois ${optionLabel} pour environ ${formattedAmount} par mois.`
-                : `Je perçois ${optionLabel}.`,
-            );
-          } else {
-            segments.push(
-              formattedAmount
-                ? `L'adulte ${index + 1} perçoit ${optionLabel} pour environ ${formattedAmount} par mois.`
-                : `L'adulte ${index + 1} perçoit ${optionLabel}.`,
-            );
-          }
-        });
-      });
-    });
-
-    if (selectedLifeEvents.includes('single-parent')) {
-      segments.push('Je suis parent isolé.');
-    }
-    if (selectedLifeEvents.includes('disabled')) {
-      segments.push('Je suis reconnu(e) en situation de handicap.');
-    }
-    if (selectedLifeEvents.includes('pregnant')) {
-      segments.push('Une grossesse est en cours dans le foyer.');
-    }
-    if (selectedLifeEvents.includes('student')) {
-      segments.push('Je suis étudiant(e).');
-    }
-
-    segments.push(
-      {
-        locataire: 'Je suis locataire de mon logement.',
-        proprietaire: 'Je suis propriétaire de mon logement.',
-        heberge: "Je suis hébergé(e) gratuitement.",
-      }[housingType],
-    );
-
-    const formattedRent = formatCurrencyFromInput(rentAmount);
-    if (formattedRent && housingType === 'locataire') {
-      segments.push(`Mon loyer mensuel (charges comprises) est de ${formattedRent}.`);
+    if (lifeEventNotes.trim().length > 0) {
+      segments.push(`Autres événements : ${lifeEventNotes.trim()}.`);
     }
 
     if (otherResources.trim().length > 0) {
-      segments.push(otherResources.trim());
+      segments.push(`Autres informations : ${otherResources.trim()}.`);
     }
 
-    return segments.join(' ');
+    return segments.join(' ').trim();
   }, [
+    adultIdentities,
+    disabilityDetails,
+    hasHousingAnswer,
     householdAdults,
     householdChildren,
-    selectedLifeEvents,
-    disabledChildrenCount,
-    disabledChildrenDetails,
-    childrenMdphRecognition,
-    disabledAdultsCount,
-    adultSituations,
     housingType,
-    rentAmount,
+    incomeDetails,
+    lifeEventNotes,
+    maritalStatus,
     otherResources,
+    professionalDetails,
+    rentAmount,
+    selectedLifeEvents,
+    childrenDetails,
   ]);
 
   const handleApplyGuidedSummary = useCallback(() => {
@@ -684,6 +418,262 @@ export default function ChatScreen() {
 
     setMessage(guidedSummary.trim());
   }, [guidedSummary]);
+
+  const handleChatSubmit = useCallback(() => {
+    if (isChatFinished) {
+      return;
+    }
+
+    const step = chatSteps[currentChatStep];
+    if (!step) {
+      return;
+    }
+
+    const rawAnswer = chatInput.trim();
+    if (!rawAnswer.length) {
+      setChatError('Veuillez saisir une réponse.');
+      return;
+    }
+
+    const normalizedAnswer = normalizeText(rawAnswer);
+
+    switch (step.id) {
+      case 'adultCount': {
+        const value = Number.parseInt(rawAnswer, 10);
+        if (!Number.isFinite(value) || value <= 0) {
+          setChatError("Indiquez un nombre d'adultes valide (ex : 1, 2...).");
+          return;
+        }
+        setHouseholdAdults(String(value));
+        break;
+      }
+      case 'adultIdentities': {
+        setAdultIdentities(rawAnswer);
+        break;
+      }
+      case 'maritalStatus': {
+        const matched = MARITAL_STATUS_OPTIONS.find((option) => {
+          const normalizedLabel = normalizeText(option.label);
+          return (
+            normalizedLabel === normalizedAnswer ||
+            normalizedLabel.includes(normalizedAnswer) ||
+            normalizedAnswer.includes(normalizedLabel)
+          );
+        });
+
+        if (!matched) {
+          setChatError("Choisissez parmi les situations proposées (célibataire, en couple, marié...).");
+          return;
+        }
+
+        setMaritalStatus(matched.label);
+        break;
+      }
+      case 'childrenCount': {
+        const value = Number.parseInt(rawAnswer, 10);
+        if (!Number.isFinite(value) || value < 0) {
+          setChatError("Indiquez un nombre d'enfants valide (0, 1, 2...).");
+          return;
+        }
+        setHouseholdChildren(String(value));
+        if (value === 0) {
+          setChildrenDetails('');
+        }
+        break;
+      }
+      case 'childrenDetails': {
+        if (
+          normalizedAnswer === 'aucun' ||
+          normalizedAnswer === 'aucune' ||
+          normalizedAnswer === 'non' ||
+          normalizedAnswer === '0'
+        ) {
+          setChildrenDetails('');
+        } else {
+          setChildrenDetails(rawAnswer);
+        }
+        break;
+      }
+      case 'disability': {
+        if (
+          normalizedAnswer === 'non' ||
+          normalizedAnswer === 'aucun' ||
+          normalizedAnswer === 'aucune' ||
+          normalizedAnswer.includes('pas')
+        ) {
+          setDisabilityDetails("Personne dans le foyer n'est en situation de handicap ou reconnue par la MDPH.");
+        } else {
+          setDisabilityDetails(rawAnswer);
+        }
+        break;
+      }
+      case 'professional': {
+        setProfessionalDetails(rawAnswer);
+        break;
+      }
+      case 'income': {
+        setIncomeDetails(rawAnswer);
+        break;
+      }
+      case 'housingType': {
+        const matched = HOUSING_OPTIONS.find((option) => {
+          const normalizedLabel = normalizeText(option.label);
+          const normalizedId = normalizeText(option.id);
+          return (
+            normalizedLabel === normalizedAnswer ||
+            normalizedId === normalizedAnswer ||
+            normalizedAnswer.includes(normalizedLabel) ||
+            normalizedAnswer.includes(normalizedId)
+          );
+        });
+
+        if (!matched) {
+          setChatError('Indiquez si vous êtes locataire, propriétaire ou hébergé gratuitement.');
+          return;
+        }
+
+        setHousingType(matched.id);
+        setHasHousingAnswer(true);
+        break;
+      }
+      case 'rent': {
+        if (
+          normalizedAnswer === 'non' ||
+          normalizedAnswer === 'non applicable' ||
+          normalizedAnswer === 'aucun' ||
+          normalizedAnswer === '0' ||
+          normalizedAnswer === 'zero'
+        ) {
+          setRentAmount('');
+        } else {
+          setRentAmount(rawAnswer);
+        }
+        break;
+      }
+      case 'lifeEvents': {
+        if (
+          normalizedAnswer === 'aucun' ||
+          normalizedAnswer === 'aucune' ||
+          normalizedAnswer === 'non' ||
+          normalizedAnswer === 'rien'
+        ) {
+          setSelectedLifeEvents([]);
+          setLifeEventNotes('');
+          break;
+        }
+
+        const tokens = rawAnswer
+          .split(/[;,/]/)
+          .map((token) => token.trim())
+          .filter((token) => token.length > 0);
+
+        if (tokens.length === 0) {
+          setSelectedLifeEvents([]);
+          setLifeEventNotes('');
+          break;
+        }
+
+        const recognized = new Set<string>();
+        const unknown: string[] = [];
+
+        tokens.forEach((token) => {
+          const normalizedToken = normalizeText(token);
+          const asIndex = Number.parseInt(normalizedToken, 10);
+          if (
+            Number.isFinite(asIndex) &&
+            asIndex > 0 &&
+            asIndex <= LIFE_EVENT_OPTIONS.length
+          ) {
+            recognized.add(LIFE_EVENT_OPTIONS[asIndex - 1].id);
+            return;
+          }
+
+          const byId = LIFE_EVENT_OPTIONS.find((event) => normalizeText(event.id) === normalizedToken);
+          if (byId) {
+            recognized.add(byId.id);
+            return;
+          }
+
+          const byLabel = LIFE_EVENT_OPTIONS.find((event) =>
+            normalizeText(event.label).includes(normalizedToken) ||
+            normalizedToken.includes(normalizeText(event.label)),
+          );
+
+          if (byLabel) {
+            recognized.add(byLabel.id);
+            return;
+          }
+
+          unknown.push(token);
+        });
+
+        const recognizedArray = Array.from(recognized);
+        if (recognizedArray.length === 0) {
+          setSelectedLifeEvents([]);
+          setLifeEventNotes(rawAnswer);
+        } else {
+          setSelectedLifeEvents(recognizedArray);
+          setLifeEventNotes(unknown.join(', '));
+        }
+        break;
+      }
+      case 'otherResources': {
+        if (
+          normalizedAnswer === 'non' ||
+          normalizedAnswer === 'aucun' ||
+          normalizedAnswer === 'aucune' ||
+          normalizedAnswer === 'rien'
+        ) {
+          setOtherResources('');
+        } else {
+          setOtherResources(rawAnswer);
+        }
+        break;
+      }
+      default: {
+        break;
+      }
+    }
+
+    const nextStepIndex = currentChatStep + 1;
+
+    setChatMessages((current) => {
+      const updated: ChatMessage[] = [
+        ...current,
+        { id: `user-${Date.now()}`, role: 'user', text: rawAnswer },
+      ];
+
+      if (nextStepIndex < chatSteps.length) {
+        const nextStep = chatSteps[nextStepIndex];
+        updated.push({
+          id: `bot-${nextStep.id}-${Date.now()}`,
+          role: 'bot',
+          text: nextStep.prompt,
+        });
+      } else {
+        updated.push({
+          id: 'bot-finish',
+          role: 'bot',
+          text:
+            'Merci pour toutes ces précisions. Consultez le résumé généré ci-dessous puis cliquez sur « Utiliser ce résumé ».',
+        });
+      }
+
+      return updated;
+    });
+
+    setCurrentChatStep(nextStepIndex);
+    setChatInput('');
+    setChatError(null);
+
+    if (nextStepIndex >= chatSteps.length) {
+      setIsChatFinished(true);
+    }
+  }, [chatInput, chatSteps, currentChatStep, isChatFinished]);
+
+  const handleChatRestart = useCallback(() => {
+    startChat();
+  }, [startChat]);
 
   const handleShareHistory = useCallback(() => {
     if (!historyEntries.length) {
@@ -776,7 +766,7 @@ export default function ChatScreen() {
       });
 
       refreshHistory().catch((historyRefreshError) => {
-        console.warn('Impossible de rafraîchir l\'historique', historyRefreshError);
+        console.warn("Impossible de rafraîchir l'historique", historyRefreshError);
       });
 
       router.push({
@@ -876,346 +866,92 @@ export default function ChatScreen() {
               onPress={() => setShowGuidedAssistant((previous) => !previous)}>
               <View style={styles.guidedToggleHeader}>
                 <Sparkles size={20} color="#4ba3c3" />
-                <Text style={styles.guidedToggleTitle}>Assistant de saisie</Text>
+                <Text style={styles.guidedToggleTitle}>Assistant conversationnel</Text>
               </View>
               <Text style={styles.guidedToggleSubtitle}>
-                Renseignez quelques informations clés et générez automatiquement un texte structuré.
+                Répondez au chatbot pour collecter toutes les informations nécessaires à la simulation OpenFisca.
               </Text>
             </TouchableOpacity>
 
             {showGuidedAssistant && (
               <View style={styles.guidedContent}>
-                <Text style={styles.guidedLabel}>Composition du foyer</Text>
-                <View style={styles.guidedRow}>
-                  <View style={styles.guidedField}>
-                    <Text style={styles.guidedFieldLabel}>Nombre d'adultes</Text>
-                    <TextInput
-                      style={styles.guidedInput}
-                      keyboardType="number-pad"
-                      value={householdAdults}
-                      onChangeText={setHouseholdAdults}
-                    />
-                  </View>
-                  <View style={[styles.guidedField, styles.guidedFieldLast]}>
-                    <Text style={styles.guidedFieldLabel}>Enfants à charge</Text>
-                    <TextInput
-                      style={styles.guidedInput}
-                      keyboardType="number-pad"
-                      value={householdChildren}
-                      onChangeText={setHouseholdChildren}
-                    />
-                  </View>
-                </View>
+                <View style={styles.chatContainer}>
+                  <ScrollView
+                    ref={chatScrollRef}
+                    style={styles.chatMessages}
+                    contentContainerStyle={styles.chatMessagesContainer}
+                    keyboardShouldPersistTaps="handled">
+                    {chatMessages.map((chatMessage) => (
+                      <View
+                        key={chatMessage.id}
+                        style={[
+                          styles.chatBubble,
+                          chatMessage.role === 'bot'
+                            ? styles.chatBubbleBot
+                            : styles.chatBubbleUser,
+                        ]}>
+                        <Text
+                          style={[
+                            styles.chatBubbleText,
+                            chatMessage.role === 'bot'
+                              ? styles.chatBubbleTextBot
+                              : styles.chatBubbleTextUser,
+                          ]}>
+                          {chatMessage.text}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
 
-                <Text style={styles.guidedLabel}>Handicap dans le foyer</Text>
-                <View style={styles.guidedRow}>
-                  <View style={styles.guidedField}>
-                    <Text style={styles.guidedFieldLabel}>
-                      Enfants en situation de handicap
+                  <View style={styles.chatInputRow}>
+                    <TextInput
+                      style={styles.chatInput}
+                      placeholder={isChatFinished ? 'Relancez le chatbot pour modifier les réponses' : 'Votre réponse...'}
+                      value={chatInput}
+                      onChangeText={setChatInput}
+                      editable={!isChatFinished}
+                      multiline
+                      numberOfLines={2}
+                    />
+                    <TouchableOpacity
+                      style={[
+                        styles.chatSendButton,
+                        (isChatFinished || !chatInput.trim().length) && styles.chatSendButtonDisabled,
+                      ]}
+                      onPress={handleChatSubmit}
+                      disabled={isChatFinished || !chatInput.trim().length}>
+                      <Text style={styles.chatSendButtonText}>Envoyer</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {chatError && <Text style={styles.chatError}>{chatError}</Text>}
+
+                  <View style={styles.chatActions}>
+                    <TouchableOpacity
+                      style={styles.chatActionButton}
+                      onPress={handleChatRestart}>
+                      <Text style={styles.chatActionButtonText}>Relancer le chatbot</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.chatActionButtonPrimary,
+                        !guidedSummary.trim().length && styles.chatActionButtonPrimaryDisabled,
+                      ]}
+                      onPress={handleApplyGuidedSummary}
+                      disabled={!guidedSummary.trim().length}>
+                      <Text style={styles.chatActionButtonPrimaryText}>Utiliser ce résumé</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.guidedPreviewBox}>
+                    <Text style={styles.guidedPreviewTitle}>Aperçu généré</Text>
+                    <Text style={styles.guidedPreviewText}>
+                      {guidedSummary.trim().length
+                        ? guidedSummary
+                        : 'Répondez aux questions pour générer automatiquement un résumé complet.'}
                     </Text>
-                    <TextInput
-                      style={styles.guidedInput}
-                      keyboardType="number-pad"
-                      placeholder="Ex : 1"
-                      value={disabledChildrenCount}
-                      onChangeText={setDisabledChildrenCount}
-                    />
-                  </View>
-                  <View style={[styles.guidedField, styles.guidedFieldLast]}>
-                    <Text style={styles.guidedFieldLabel}>
-                      Adultes en situation de handicap
-                    </Text>
-                    <TextInput
-                      style={styles.guidedInput}
-                      keyboardType="number-pad"
-                      placeholder="Ex : 1"
-                      value={disabledAdultsCount}
-                      onChangeText={setDisabledAdultsCount}
-                    />
                   </View>
                 </View>
-
-                <Text style={styles.guidedFieldLabel}>
-                  Enfants concernés reconnus par la MDPH ?
-                </Text>
-                <View style={styles.chipRow}>
-                  {YES_NO_OPTIONS.map((option) => {
-                    const isSelected = childrenMdphRecognition === option;
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() =>
-                          setChildrenMdphRecognition((current) =>
-                            current === option ? null : option,
-                          )
-                        }>
-                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                          {option === 'oui' ? 'Oui' : 'Non'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <Text style={styles.guidedFieldLabel}>Précisions sur les enfants concernés</Text>
-                <TextInput
-                  style={[styles.guidedInput, styles.guidedInputMultiline]}
-                  multiline
-                  numberOfLines={2}
-                  textAlignVertical="top"
-                  placeholder="Ex : Léa (10 ans) et Marc (7 ans)."
-                  value={disabledChildrenDetails}
-                  onChangeText={setDisabledChildrenDetails}
-                />
-
-                {adultSituations.length > 0 && (
-                  <>
-                    <Text style={styles.guidedLabel}>Situation des adultes</Text>
-                    {adultSituations.map((adult, index) => {
-                      const showAdultTitle = adultSituations.length > 1;
-                      return (
-                        <View key={`adult-${index}`} style={styles.adultSection}>
-                          {showAdultTitle && (
-                            <Text style={styles.adultSectionTitle}>Adulte {index + 1}</Text>
-                          )}
-
-                          <Text style={styles.guidedFieldLabel}>Reconnu par la MDPH ?</Text>
-                          <View style={styles.chipRow}>
-                            {YES_NO_OPTIONS.map((option) => {
-                              const isSelected = adult.mdphRecognition === option;
-                              return (
-                                <TouchableOpacity
-                                  key={option}
-                                  style={[styles.chip, isSelected && styles.chipSelected]}
-                                  onPress={() =>
-                                    setAdultSituationField(
-                                      index,
-                                      'mdphRecognition',
-                                      isSelected ? null : option,
-                                    )
-                                  }>
-                                  <Text
-                                    style={[styles.chipText, isSelected && styles.chipTextSelected]}
-                                  >
-                                    {option === 'oui' ? 'Oui' : 'Non'}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-
-                          <Text style={styles.guidedFieldLabel}>Titulaire d'une RQTH ?</Text>
-                          <View style={styles.chipRow}>
-                            {YES_NO_OPTIONS.map((option) => {
-                              const isSelected = adult.hasRqth === option;
-                              return (
-                                <TouchableOpacity
-                                  key={option}
-                                  style={[styles.chip, isSelected && styles.chipSelected]}
-                                  onPress={() =>
-                                    setAdultSituationField(
-                                      index,
-                                      'hasRqth',
-                                      isSelected ? null : option,
-                                    )
-                                  }>
-                                  <Text
-                                    style={[styles.chipText, isSelected && styles.chipTextSelected]}
-                                  >
-                                    {option === 'oui' ? 'Oui' : 'Non'}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-
-                          <Text style={styles.guidedFieldLabel}>Perçoit l'AAH ?</Text>
-                          <View style={styles.chipRow}>
-                            {YES_NO_OPTIONS.map((option) => {
-                              const isSelected = adult.perceivesAah === option;
-                              return (
-                                <TouchableOpacity
-                                  key={option}
-                                  style={[styles.chip, isSelected && styles.chipSelected]}
-                                  onPress={() =>
-                                    setAdultSituationField(
-                                      index,
-                                      'perceivesAah',
-                                      isSelected ? null : option,
-                                    )
-                                  }>
-                                  <Text
-                                    style={[styles.chipText, isSelected && styles.chipTextSelected]}
-                                  >
-                                    {option === 'oui' ? 'Oui' : 'Non'}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-
-                          {adult.perceivesAah === 'oui' && (
-                            <>
-                              <Text style={styles.guidedFieldLabel}>Montant mensuel de l'AAH</Text>
-                              <TextInput
-                                style={styles.guidedInput}
-                                keyboardType="decimal-pad"
-                                placeholder="Ex : 300"
-                                value={adult.aahAmount}
-                                onChangeText={(value) =>
-                                  setAdultSituationField(index, 'aahAmount', value)
-                                }
-                              />
-                            </>
-                          )}
-
-                          <Text style={styles.guidedFieldLabel}>Situation professionnelle</Text>
-                          <View style={styles.optionList}>
-                            {PROFESSIONAL_STATUS_OPTIONS.map((status) => {
-                              const isSelected = adult.employmentStatuses.includes(status.id);
-                              return (
-                                <TouchableOpacity
-                                  key={status.id}
-                                  style={[styles.optionRow, isSelected && styles.optionRowSelected]}
-                                  onPress={() => toggleAdultEmploymentStatus(index, status.id)}>
-                                  <View style={[styles.checkbox, isSelected && styles.checkboxSelected]} />
-                                  <Text
-                                    style={[styles.optionText, isSelected && styles.optionTextSelected]}
-                                  >
-                                    {status.label}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </View>
-
-                          <Text style={styles.guidedFieldLabel}>Revenus et ressources</Text>
-                          <View style={styles.incomeGroups}>
-                            {INCOME_GROUPS.map((group) => {
-                              const groupIncomes = adult.incomes[group.id] ?? {};
-                              return (
-                                <View key={group.id} style={styles.incomeGroup}>
-                                  <Text style={styles.incomeGroupTitle}>{group.label}</Text>
-                                  {group.options.map((option) => {
-                                    const isSelected = option.id in groupIncomes;
-                                    return (
-                                      <View key={option.id} style={styles.incomeOption}>
-                                        <TouchableOpacity
-                                          style={[styles.optionRow, isSelected && styles.optionRowSelected]}
-                                          onPress={() =>
-                                            toggleAdultIncomeOption(index, group.id, option.id)
-                                          }>
-                                          <View
-                                            style={[styles.checkbox, isSelected && styles.checkboxSelected]}
-                                          />
-                                          <Text
-                                            style={[styles.optionText, isSelected && styles.optionTextSelected]}
-                                          >
-                                            {option.label}
-                                          </Text>
-                                        </TouchableOpacity>
-                                        {isSelected && (
-                                          <TextInput
-                                            style={styles.incomeAmountInput}
-                                            keyboardType="decimal-pad"
-                                            placeholder="Montant mensuel"
-                                            value={groupIncomes[option.id] ?? ''}
-                                            onChangeText={(value) =>
-                                              setAdultIncomeAmount(index, group.id, option.id, value)
-                                            }
-                                          />
-                                        )}
-                                      </View>
-                                    );
-                                  })}
-                                </View>
-                              );
-                            })}
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </>
-                )}
-
-                <Text style={styles.guidedLabel}>Logement</Text>
-                <View style={styles.chipRow}>
-                  {HOUSING_OPTIONS.map((option) => {
-                    const isSelected = housingType === option.id;
-                    return (
-                      <TouchableOpacity
-                        key={option.id}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() => setHousingType(option.id)}>
-                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                          {option.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                {housingType === 'locataire' && (
-                  <>
-                    <Text style={styles.guidedLabel}>Loyer mensuel (charges comprises)</Text>
-                    <TextInput
-                      style={styles.guidedInput}
-                      keyboardType="decimal-pad"
-                      placeholder="Ex : 650"
-                      value={rentAmount}
-                      onChangeText={setRentAmount}
-                    />
-                  </>
-                )}
-
-                <Text style={styles.guidedLabel}>Événements de vie</Text>
-                <View style={styles.chipRow}>
-                  {LIFE_EVENT_OPTIONS.map((event) => {
-                    const isSelected = selectedLifeEvents.includes(event.id);
-                    return (
-                      <TouchableOpacity
-                        key={event.id}
-                        style={[styles.chip, isSelected && styles.chipSelected]}
-                        onPress={() => toggleLifeEvent(event.id)}>
-                        <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                          {event.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-
-                <Text style={styles.guidedLabel}>Informations complémentaires</Text>
-                <TextInput
-                  style={[styles.guidedInput, styles.guidedInputMultiline]}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
-                  placeholder="Ex : Je perçois une pension alimentaire de 200 €."
-                  value={otherResources}
-                  onChangeText={setOtherResources}
-                />
-
-                <View style={styles.guidedPreviewBox}>
-                  <Text style={styles.guidedPreviewTitle}>Aperçu généré</Text>
-                  <Text style={styles.guidedPreviewText}>
-                    {guidedSummary.trim().length
-                      ? guidedSummary
-                      : 'Complétez les champs pour générer automatiquement un message.'}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.button,
-                    styles.guidedButton,
-                    !guidedSummary.trim().length && styles.buttonDisabled,
-                  ]}
-                  onPress={handleApplyGuidedSummary}
-                  disabled={!guidedSummary.trim().length}>
-                  <Text style={styles.buttonText}>Utiliser cet aperçu</Text>
-                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -1252,8 +988,7 @@ export default function ChatScreen() {
 
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>
-              💡 Mentionnez votre situation familiale, vos revenus, votre loyer et
-              le nombre d'enfants pour obtenir une simulation complète.
+              💡 Mentionnez votre situation familiale, vos revenus, votre logement et vos événements de vie pour obtenir une simulation complète.
             </Text>
           </View>
 
@@ -1310,11 +1045,7 @@ export default function ChatScreen() {
                           <Text style={styles.historyButtonTextSecondary}>Pré-remplir</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={[
-                            styles.historyButton,
-                            styles.historyButtonLast,
-                            styles.historyPrimaryButton,
-                          ]}
+                          style={[styles.historyButton, styles.historyPrimaryButton]}
                           onPress={() =>
                             router.push({
                               pathname: '/(tabs)/result',
@@ -1329,7 +1060,7 @@ export default function ChatScreen() {
                 })}
 
                 <TouchableOpacity
-                  style={[styles.historyButton, styles.historyButtonLast, styles.historyShareButton]}
+                  style={[styles.historyButton, styles.historyShareButton]}
                   onPress={handleShareHistory}>
                   <Text style={styles.historyShareText}>Partager le dernier résumé</Text>
                 </TouchableOpacity>
@@ -1401,143 +1132,133 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
+    gap: 8,
   },
   guidedToggleTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2c3e50',
-    marginLeft: 8,
   },
   guidedToggleSubtitle: {
     fontSize: 13,
-    color: '#666',
+    color: '#637085',
     lineHeight: 18,
   },
   guidedContent: {
     padding: 16,
-    backgroundColor: '#fbfdff',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
   },
-  guidedLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#34495e',
-    marginBottom: 8,
-  },
-  guidedRow: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  guidedField: {
-    flex: 1,
-    marginRight: 12,
-  },
-  guidedFieldLast: {
-    marginRight: 0,
-  },
-  guidedFieldLabel: {
-    fontSize: 13,
-    color: '#555',
-    marginBottom: 6,
-  },
-  guidedInput: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#d6e0eb',
-    padding: 10,
-    fontSize: 15,
-    color: '#2c3e50',
-    marginBottom: 16,
-  },
-  adultSection: {
-    backgroundColor: '#fff',
+  chatContainer: {
+    backgroundColor: '#f5f9fc',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#e3ebf5',
     padding: 12,
-    marginBottom: 16,
-  },
-  adultSectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2c3e50',
-    marginBottom: 8,
-  },
-  guidedInputMultiline: {
-    minHeight: 80,
-  },
-  optionList: {
-    marginBottom: 16,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d6e0eb',
-    borderRadius: 10,
+    borderColor: '#d8e6f2',
+  },
+  chatMessages: {
+    maxHeight: 320,
+  },
+  chatMessagesContainer: {
+    paddingVertical: 8,
+    gap: 8,
+  },
+  chatBubble: {
+    maxWidth: '90%',
+    borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    backgroundColor: '#fff',
-    marginBottom: 8,
   },
-  optionRowSelected: {
-    borderColor: '#4ba3c3',
-    backgroundColor: '#f0f7fb',
+  chatBubbleBot: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#e8f4fb',
   },
-  optionText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#2c3e50',
-  },
-  optionTextSelected: {
-    fontWeight: '600',
-    color: '#2c3e50',
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#b0c4d4',
-    marginRight: 10,
-    backgroundColor: '#fff',
-  },
-  checkboxSelected: {
+  chatBubbleUser: {
+    alignSelf: 'flex-end',
     backgroundColor: '#4ba3c3',
-    borderColor: '#4ba3c3',
   },
-  incomeGroups: {
-    marginBottom: 16,
+  chatBubbleText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
-  incomeGroup: {
-    marginBottom: 12,
-  },
-  incomeGroupTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+  chatBubbleTextBot: {
     color: '#2c3e50',
-    marginBottom: 6,
   },
-  incomeOption: {
-    marginBottom: 8,
+  chatBubbleTextUser: {
+    color: '#fff',
   },
-  incomeAmountInput: {
-    marginTop: 6,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+  chatInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    marginTop: 12,
+  },
+  chatInput: {
+    flex: 1,
+    minHeight: 44,
+    maxHeight: 120,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#d6e0eb',
-    padding: 10,
+    borderColor: '#cddfed',
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 14,
     color: '#2c3e50',
+  },
+  chatSendButton: {
+    backgroundColor: '#4ba3c3',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  chatSendButtonDisabled: {
+    backgroundColor: '#aacfe0',
+  },
+  chatSendButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  chatError: {
+    color: '#c0392b',
+    fontSize: 13,
+    marginTop: 8,
+  },
+  chatActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  chatActionButton: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cddfed',
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  chatActionButtonText: {
+    color: '#2c3e50',
+    fontWeight: '600',
+  },
+  chatActionButtonPrimary: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#4ba3c3',
+  },
+  chatActionButtonPrimaryDisabled: {
+    backgroundColor: '#aacfe0',
+  },
+  chatActionButtonPrimaryText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   guidedPreviewBox: {
     backgroundColor: '#f1f7fb',
     borderRadius: 10,
     padding: 12,
-    marginBottom: 16,
+    marginTop: 12,
   },
   guidedPreviewTitle: {
     fontSize: 13,
@@ -1549,9 +1270,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#34495e',
     lineHeight: 18,
-  },
-  guidedButton: {
-    marginTop: 0,
   },
   label: {
     fontSize: 16,
@@ -1603,56 +1321,29 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  infoBox: {
-    backgroundColor: '#e8f5e9',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#6ad49b',
-  },
-  infoText: {
-    color: '#2e7d32',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-  },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#d6e0eb',
-    backgroundColor: '#fff',
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  chipSelected: {
-    backgroundColor: '#4ba3c3',
-    borderColor: '#4ba3c3',
-  },
-  chipText: {
-    fontSize: 13,
-    color: '#2c3e50',
-  },
-  chipTextSelected: {
-    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
+  infoBox: {
+    backgroundColor: '#eaf6fb',
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4ba3c3',
+  },
+  infoText: {
+    color: '#2c3e50',
+    fontSize: 13,
+    lineHeight: 18,
+  },
   historySection: {
-    marginTop: 32,
+    marginTop: 28,
     backgroundColor: '#fff',
     borderRadius: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -1661,12 +1352,12 @@ const styles = StyleSheet.create({
   },
   historyHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 12,
+    gap: 12,
   },
   historyHeaderText: {
     flex: 1,
-    marginLeft: 12,
   },
   historyTitle: {
     fontSize: 16,
@@ -1674,89 +1365,82 @@ const styles = StyleSheet.create({
     color: '#2c3e50',
   },
   historySubtitle: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
+    fontSize: 12,
+    color: '#637085',
+    marginTop: 2,
   },
   historyLoader: {
     marginTop: 12,
   },
   historyError: {
     color: '#c0392b',
-    fontSize: 13,
+    fontSize: 14,
   },
   historyEmpty: {
     fontSize: 13,
-    color: '#666',
+    color: '#637085',
   },
   historyCard: {
     borderWidth: 1,
-    borderColor: '#edf2f7',
+    borderColor: '#e0e9f1',
     borderRadius: 10,
     padding: 12,
     marginBottom: 12,
-    backgroundColor: '#fdfefe',
+    backgroundColor: '#f9fbfd',
   },
   historyDate: {
     fontSize: 12,
-    color: '#7f8c8d',
-    marginBottom: 6,
+    color: '#637085',
+    marginBottom: 8,
   },
   historyMessage: {
     fontSize: 13,
     color: '#2c3e50',
-    marginBottom: 8,
-    lineHeight: 18,
+    marginBottom: 10,
   },
   historyBenefits: {
     marginBottom: 12,
   },
   historyBenefit: {
     fontSize: 12,
-    color: '#4b5563',
-    lineHeight: 16,
+    color: '#2c3e50',
+    marginBottom: 4,
   },
   historyActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 8,
   },
   historyButton: {
     flex: 1,
+    borderRadius: 10,
     paddingVertical: 10,
-    borderRadius: 8,
     alignItems: 'center',
-    marginRight: 12,
-  },
-  historyPrimaryButton: {
-    backgroundColor: '#4ba3c3',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   historySecondaryButton: {
-    borderWidth: 1,
-    borderColor: '#4ba3c3',
+    borderColor: '#cddfed',
+    backgroundColor: '#fff',
   },
-  historyButtonLast: {
-    marginRight: 0,
+  historyPrimaryButton: {
+    borderColor: '#4ba3c3',
+    backgroundColor: '#4ba3c3',
+  },
+  historyButtonTextSecondary: {
+    color: '#2c3e50',
+    fontWeight: '600',
   },
   historyButtonTextPrimary: {
     color: '#fff',
     fontWeight: '600',
-    fontSize: 14,
-  },
-  historyButtonTextSecondary: {
-    color: '#4ba3c3',
-    fontWeight: '600',
-    fontSize: 14,
   },
   historyShareButton: {
-    marginTop: 4,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#9acfe0',
-    paddingVertical: 10,
+    borderColor: '#4ba3c3',
+    backgroundColor: '#fff',
+    marginTop: 8,
   },
   historyShareText: {
-    color: '#2c3e50',
-    fontSize: 13,
+    color: '#4ba3c3',
     fontWeight: '600',
   },
 });

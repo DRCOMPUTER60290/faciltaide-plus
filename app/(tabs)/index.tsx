@@ -1123,7 +1123,7 @@ export default function ChatScreen() {
                         styles.chatSendButton,
                         (isChatFinished || !chatInput.trim().length) && styles.chatSendButtonDisabled,
                       ]}
-                      onPress={handleChatSubmit}
+                      onPress={() => handleChatSubmit()}
                       disabled={isChatFinished || !chatInput.trim().length}>
                       <Text style={styles.chatSendButtonText}>Envoyer</Text>
                     </TouchableOpacity>

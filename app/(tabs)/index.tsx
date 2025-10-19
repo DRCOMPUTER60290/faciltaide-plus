@@ -49,6 +49,7 @@ type ChatStep = {
   section: string;
   label?: string;
   type?: 'info' | 'question';
+  options?: string[];
 };
 
 const calculateAge = (birthDate: Date, referenceDate: Date = new Date()): number => {
@@ -86,12 +87,14 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 1 – Composition du foyer',
     label: 'Sexe',
     prompt: '3. Quel est votre sexe ? (Masculin / Féminin)',
+    options: ['Masculin', 'Féminin'],
   },
   {
     id: 'living-arrangement',
     section: 'Section 1 – Composition du foyer',
     label: 'Vous vivez',
     prompt: '4. Vivez-vous : Seul(e) ou En couple ? Indiquez « Seul(e) » ou « En couple ».',
+    options: ['Seul(e)', 'En couple'],
   },
   {
     id: 'spouse-first-name',
@@ -113,6 +116,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Sexe du conjoint',
     prompt:
       '7. Si vous vivez en couple, quel est son sexe ? Répondez « Non applicable » si vous vivez seul(e).',
+    options: ['Masculin', 'Féminin', 'Non applicable'],
   },
   {
     id: 'conjugal-status',
@@ -127,6 +131,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Enfants ou personnes à charge',
     prompt:
       '9. Avez-vous des enfants ou des personnes à charge vivant avec vous ? (Oui / Non)',
+    options: ['Oui', 'Non'],
   },
   {
     id: 'dependents-names',
@@ -242,6 +247,16 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Statut d’occupation',
     prompt:
       '3. Quel est votre statut d’occupation ? (Locataire vide, Locataire meublé, Colocation, Logement social, Propriétaire, Hébergé gratuitement, Logement étudiant, Hébergement d’urgence / sans domicile).',
+    options: [
+      'Locataire vide',
+      'Locataire meublé',
+      'Colocation',
+      'Logement social',
+      'Propriétaire',
+      'Hébergé gratuitement',
+      'Logement étudiant',
+      'Hébergement d’urgence / sans domicile',
+    ],
   },
   {
     id: 'housing-details',
@@ -261,12 +276,14 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 3 – Logement',
     label: 'Répartition des charges',
     prompt: '24. Êtes-vous uniquement responsable des charges ou les partagez-vous ?',
+    options: ['Je suis seul(e) responsable', 'Les charges sont partagées'],
   },
   {
     id: 'housing-continue',
     section: 'Section 3 – Logement',
     label: 'Continuer vers les revenus',
     prompt: 'Souhaitez-vous continuer vers les ressources et revenus ? (Oui / Non)',
+    options: ['Oui', 'Non'],
   },
   {
     id: 'section4-intro',
@@ -334,6 +351,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 4 – Ressources et revenus',
     label: 'Continuer vers le patrimoine',
     prompt: 'Souhaitez-vous continuer vers la section patrimoine ? (Oui / Non)',
+    options: ['Oui', 'Non'],
   },
   {
     id: 'section5-intro',
@@ -382,6 +400,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Dernier choix',
     prompt:
       'Souhaitez-vous vérifier vos réponses avant de lancer la simulation ou lancer directement le calcul ? (Vérifier mes réponses / Lancer directement la simulation)',
+    options: ['Vérifier mes réponses', 'Lancer directement la simulation'],
   },
 ];
 
@@ -716,101 +735,119 @@ export default function ChatScreen() {
     setMessage(guidedSummary.trim());
   }, [guidedSummary]);
 
-  const handleChatSubmit = useCallback(() => {
-    if (isChatFinished) {
-      return;
-    }
-
-    const step = chatSteps[currentChatStep];
-    if (!step || step.type === 'info') {
-      return;
-    }
-
-    const rawAnswer = chatInput.trim();
-    if (!rawAnswer.length) {
-      setChatError('Veuillez saisir une réponse.');
-      return;
-    }
-
-    const isBirthDateStep =
-      step.id.includes('birth-date') ||
-      `${step.label ?? ''} ${step.prompt}`.toLowerCase().includes('date de naissance');
-
-    let normalizedAnswer = rawAnswer;
-    const additionalMessages: ChatMessage[] = [];
-
-    if (isBirthDateStep) {
-      const parsedBirthDate = parseBirthDateInput(rawAnswer);
-      if (!parsedBirthDate) {
-        setChatError('Veuillez saisir une date valide au format JJ/MM/AAAA.');
+  const handleChatSubmit = useCallback(
+    (answerOverride?: string) => {
+      if (isChatFinished) {
         return;
       }
 
-      if (parsedBirthDate.getTime() < minimumBirthDate.getTime() || parsedBirthDate.getTime() > maximumBirthDate.getTime()) {
-        setChatError(
-          `Veuillez saisir une date comprise entre ${formatBirthDate(minimumBirthDate)} et ${formatBirthDate(maximumBirthDate)}.`,
-        );
+      const step = chatSteps[currentChatStep];
+      if (!step || step.type === 'info') {
         return;
       }
 
-      normalizedAnswer = formatBirthDate(parsedBirthDate);
-      const age = calculateAge(parsedBirthDate, new Date());
-      const ageLabel = age > 1 ? 'ans' : 'an';
+      const rawAnswer = (answerOverride ?? chatInput).trim();
+      if (!rawAnswer.length) {
+        setChatError('Veuillez saisir une réponse.');
+        return;
+      }
 
-      additionalMessages.push({
-        id: `bot-age-${Date.now()}-${currentChatStep}`,
-        role: 'bot',
-        text: `Âge calculé : ${age} ${ageLabel}.`,
-      });
-    }
+      const isBirthDateStep =
+        step.id.includes('birth-date') ||
+        `${step.label ?? ''} ${step.prompt}`.toLowerCase().includes('date de naissance');
 
-    const userMessage: ChatMessage = {
-      id: `user-${Date.now()}-${currentChatStep}`,
-      role: 'user',
-      text: normalizedAnswer,
-    };
-    const messagesAfterReply = [...chatMessages, userMessage, ...additionalMessages];
+      let normalizedAnswer = rawAnswer;
+      const additionalMessages: ChatMessage[] = [];
 
-    setChatError(null);
+      if (isBirthDateStep) {
+        const parsedBirthDate = parseBirthDateInput(rawAnswer);
+        if (!parsedBirthDate) {
+          setChatError('Veuillez saisir une date valide au format JJ/MM/AAAA.');
+          return;
+        }
 
-    setGuidedAnswers((current) => ({
-      ...current,
-      [step.id]: normalizedAnswer,
-    }));
+        if (
+          parsedBirthDate.getTime() < minimumBirthDate.getTime() ||
+          parsedBirthDate.getTime() > maximumBirthDate.getTime()
+        ) {
+          setChatError(
+            `Veuillez saisir une date comprise entre ${formatBirthDate(minimumBirthDate)} et ${formatBirthDate(maximumBirthDate)}.`,
+          );
+          return;
+        }
 
-    const { messages, nextIndex, finished } = appendNextPrompts(
-      messagesAfterReply,
-      currentChatStep + 1,
-    );
+        normalizedAnswer = formatBirthDate(parsedBirthDate);
+        const age = calculateAge(parsedBirthDate, new Date());
+        const ageLabel = age > 1 ? 'ans' : 'an';
 
-    const finalMessages: ChatMessage[] = finished
-      ? [
-          ...messages,
-          {
-            id: `bot-finish-${Date.now()}`,
-            role: 'bot',
-            text:
-              'Merci pour toutes ces précisions. Consultez le résumé généré ci-dessous puis cliquez sur « Utiliser ce résumé ».',
-          },
-        ]
-      : messages;
+        additionalMessages.push({
+          id: `bot-age-${Date.now()}-${currentChatStep}`,
+          role: 'bot',
+          text: `Âge calculé : ${age} ${ageLabel}.`,
+        });
+      }
 
-    setChatMessages(finalMessages);
-    setCurrentChatStep(nextIndex);
-    setChatInput('');
-    setIsChatFinished(finished);
-  }, [
-    appendNextPrompts,
-    chatInput,
-    chatMessages,
-    chatSteps,
-    currentChatStep,
-    formatBirthDate,
-    isChatFinished,
-    maximumBirthDate,
-    minimumBirthDate,
-    parseBirthDateInput,
-  ]);
+      const userMessage: ChatMessage = {
+        id: `user-${Date.now()}-${currentChatStep}`,
+        role: 'user',
+        text: normalizedAnswer,
+      };
+      const messagesAfterReply = [...chatMessages, userMessage, ...additionalMessages];
+
+      setChatError(null);
+
+      setGuidedAnswers((current) => ({
+        ...current,
+        [step.id]: normalizedAnswer,
+      }));
+
+      const { messages, nextIndex, finished } = appendNextPrompts(
+        messagesAfterReply,
+        currentChatStep + 1,
+      );
+
+      const finalMessages: ChatMessage[] = finished
+        ? [
+            ...messages,
+            {
+              id: `bot-finish-${Date.now()}`,
+              role: 'bot',
+              text:
+                'Merci pour toutes ces précisions. Consultez le résumé généré ci-dessous puis cliquez sur « Utiliser ce résumé ».',
+            },
+          ]
+        : messages;
+
+      setChatMessages(finalMessages);
+      setCurrentChatStep(nextIndex);
+      setChatInput('');
+      setIsChatFinished(finished);
+    },
+    [
+      appendNextPrompts,
+      chatInput,
+      chatMessages,
+      chatSteps,
+      currentChatStep,
+      formatBirthDate,
+      isChatFinished,
+      maximumBirthDate,
+      minimumBirthDate,
+      parseBirthDateInput,
+    ],
+  );
+
+  const handleOptionSelect = useCallback(
+    (option: string) => {
+      if (isChatFinished) {
+        return;
+      }
+
+      setChatInput(option);
+      handleChatSubmit(option);
+    },
+    [handleChatSubmit, isChatFinished],
+  );
 
   const handleChatRestart = useCallback(() => {
     startChat();
@@ -1043,6 +1080,33 @@ export default function ChatScreen() {
                       </View>
                     ))}
                   </ScrollView>
+
+                  {activeChatStep?.options && activeChatStep.options.length > 0 && (
+                    <View style={styles.chatOptionsContainer}>
+                      {activeChatStep.options.map((option) => {
+                        const isSelected = chatInput.trim() === option;
+                        return (
+                          <TouchableOpacity
+                            key={option}
+                            style={[
+                              styles.chatOptionButton,
+                              isSelected && styles.chatOptionButtonSelected,
+                              isChatFinished && styles.chatOptionButtonDisabled,
+                            ]}
+                            onPress={() => handleOptionSelect(option)}
+                            disabled={isChatFinished}>
+                            <Text
+                              style={[
+                                styles.chatOptionButtonText,
+                                isSelected && styles.chatOptionButtonTextSelected,
+                              ]}>
+                              {option}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
 
                   <View style={styles.chatInputRow}>
                     <TextInput
@@ -1345,6 +1409,34 @@ const styles = StyleSheet.create({
   chatMessagesContainer: {
     paddingVertical: 8,
     gap: 8,
+  },
+  chatOptionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  chatOptionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#4ba3c3',
+    backgroundColor: '#fff',
+  },
+  chatOptionButtonSelected: {
+    backgroundColor: '#4ba3c3',
+  },
+  chatOptionButtonDisabled: {
+    opacity: 0.5,
+  },
+  chatOptionButtonText: {
+    fontSize: 14,
+    color: '#4ba3c3',
+    fontWeight: '500',
+  },
+  chatOptionButtonTextSelected: {
+    color: '#fff',
   },
   chatBubble: {
     maxWidth: '90%',

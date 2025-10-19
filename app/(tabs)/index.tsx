@@ -51,6 +51,17 @@ type ChatStep = {
   type?: 'info' | 'question';
 };
 
+const calculateAge = (birthDate: Date, referenceDate: Date = new Date()): number => {
+  let age = referenceDate.getFullYear() - birthDate.getFullYear();
+  const monthDifference = referenceDate.getMonth() - birthDate.getMonth();
+
+  if (monthDifference < 0 || (monthDifference === 0 && referenceDate.getDate() < birthDate.getDate())) {
+    age -= 1;
+  }
+
+  return age < 0 ? 0 : age;
+};
+
 const CHAT_PLAN_STEPS: ChatStep[] = [
   {
     id: 'section1-intro',
@@ -686,12 +697,50 @@ export default function ChatScreen() {
       return;
     }
 
-    const userMessage: ChatMessage = { id: `user-${Date.now()}-${currentChatStep}`, role: 'user', text: rawAnswer };
-    const messagesAfterReply = [...chatMessages, userMessage];
+    const isBirthDateStep =
+      step.id.includes('birth-date') ||
+      `${step.label ?? ''} ${step.prompt}`.toLowerCase().includes('date de naissance');
+
+    let normalizedAnswer = rawAnswer;
+    const additionalMessages: ChatMessage[] = [];
+
+    if (isBirthDateStep) {
+      const parsedBirthDate = parseBirthDateInput(rawAnswer);
+      if (!parsedBirthDate) {
+        setChatError('Veuillez saisir une date valide au format JJ/MM/AAAA.');
+        return;
+      }
+
+      if (parsedBirthDate.getTime() < minimumBirthDate.getTime() || parsedBirthDate.getTime() > maximumBirthDate.getTime()) {
+        setChatError(
+          `Veuillez saisir une date comprise entre ${formatBirthDate(minimumBirthDate)} et ${formatBirthDate(maximumBirthDate)}.`,
+        );
+        return;
+      }
+
+      normalizedAnswer = formatBirthDate(parsedBirthDate);
+      const age = calculateAge(parsedBirthDate, new Date());
+      const ageLabel = age > 1 ? 'ans' : 'an';
+
+      additionalMessages.push({
+        id: `bot-age-${Date.now()}-${currentChatStep}`,
+        role: 'bot',
+        text: `Âge calculé : ${age} ${ageLabel}.`,
+      });
+    }
+
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}-${currentChatStep}`,
+      role: 'user',
+      text: normalizedAnswer,
+    };
+    const messagesAfterReply = [...chatMessages, userMessage, ...additionalMessages];
+
+    setChatError(null);
 
     setGuidedAnswers((current) => ({
       ...current,
-      [step.id]: rawAnswer,
+      [step.id]: normalizedAnswer,
     }));
 
     const { messages, nextIndex, finished } = appendNextPrompts(
@@ -714,9 +763,19 @@ export default function ChatScreen() {
     setChatMessages(finalMessages);
     setCurrentChatStep(nextIndex);
     setChatInput('');
-    setChatError(null);
     setIsChatFinished(finished);
-  }, [appendNextPrompts, chatInput, chatMessages, chatSteps, currentChatStep, isChatFinished]);
+  }, [
+    appendNextPrompts,
+    chatInput,
+    chatMessages,
+    chatSteps,
+    currentChatStep,
+    formatBirthDate,
+    isChatFinished,
+    maximumBirthDate,
+    minimumBirthDate,
+    parseBirthDateInput,
+  ]);
 
   const handleChatRestart = useCallback(() => {
     startChat();

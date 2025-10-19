@@ -82,13 +82,25 @@ Pour chaque enfant :
    > Chatbot : 🎂 Quelle est sa date de naissance ?  
    > 📝 Format : JJ/MM/AAAA  
    > **Stockage →** `individus.enfant_X.date_naissance`
-3. **Sexe**  
-   > Chatbot : ⚥ Quel est son sexe ?  
-   > Masculin / Féminin  
+3. **Sexe**
+   > Chatbot : ⚥ Quel est son sexe ?
+   > Masculin / Féminin
    > **Stockage →** `individus.enfant_X.sexe`
-4. **Garde alternée**  
-   > Chatbot : ⚖️ Cet enfant est-il en garde alternée ?  
-   > Oui / Non  
+4. **Scolarité**
+   > Chatbot : 🎓 Quelle est sa situation scolaire actuelle ?
+   > • Non scolarisé
+   > • Maternelle
+   > • Élémentaire / Primaire
+   > • Collège
+   > • Lycée
+   > • Études supérieures
+   > • Apprentissage / Alternance
+   > • Enseignement spécialisé
+   > • Autre (préciser)
+   > **Stockage →** `individus.enfant_X.scolarite`
+5. **Garde alternée**
+   > Chatbot : ⚖️ Cet enfant est-il en garde alternée ?
+   > Oui / Non
    > **Stockage →** `familles.enfants.en_garde_alternee`
 
 Boucle de fin :
@@ -97,7 +109,7 @@ Boucle de fin :
 >
 > Oui / Non
 >
-> • Oui → répéter les questions 5.1 à 5.4  
+> • Oui → répéter les questions 5.1 à 5.5
 > • Non → passer à la confirmation
 
 ### Fin de section 1

@@ -129,11 +129,39 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       '9. Avez-vous des enfants ou des personnes à charge vivant avec vous ? (Oui / Non)',
   },
   {
-    id: 'dependents-details',
+    id: 'dependents-names',
     section: 'Section 1 – Composition du foyer',
-    label: 'Détails des enfants / personnes à charge',
+    label: 'Prénoms des enfants / personnes à charge',
     prompt:
-      '10-14. Pour chaque enfant ou personne à charge, indiquez : prénom, date de naissance, sexe et si la garde est alternée (Oui/Non). Répondez « Aucun » si personne ne vit avec vous.',
+      '10. Pour chaque enfant ou personne à charge, indiquez le prénom. Répondez « Aucun » si personne ne vit avec vous.',
+  },
+  {
+    id: 'dependents-birth-dates',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Dates de naissance des enfants / personnes à charge',
+    prompt:
+      '11. Pour chacun, précisez la date de naissance (JJ/MM/AAAA). Répondez « Non applicable » si aucun.',
+  },
+  {
+    id: 'dependents-sexes',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Sexe des enfants / personnes à charge',
+    prompt:
+      '12. Pour chaque enfant ou personne à charge, indiquez le sexe.',
+  },
+  {
+    id: 'dependents-shared-custody',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Garde alternée',
+    prompt:
+      '13. La garde est-elle alternée (Oui/Non) pour chacun des enfants ou personnes à charge ?',
+  },
+  {
+    id: 'dependents-additional-info',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Informations complémentaires',
+    prompt:
+      '14. Souhaitez-vous ajouter d’autres informations utiles concernant les enfants ou personnes à charge ?',
   },
   {
     id: 'section2-intro',

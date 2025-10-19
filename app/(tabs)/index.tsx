@@ -150,18 +150,25 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       '12. Pour chaque enfant ou personne à charge, indiquez le sexe.',
   },
   {
+    id: 'dependents-schooling',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Scolarité des enfants / personnes à charge',
+    prompt:
+      '13. Pour chaque enfant ou personne à charge, précisez la situation scolaire (Non scolarisé, Maternelle, Élémentaire, Collège, Lycée, Études supérieures, Apprentissage, Enseignement spécialisé, Autre). Indiquez « Non applicable » si aucun.',
+  },
+  {
     id: 'dependents-shared-custody',
     section: 'Section 1 – Composition du foyer',
     label: 'Garde alternée',
     prompt:
-      '13. La garde est-elle alternée (Oui/Non) pour chacun des enfants ou personnes à charge ?',
+      '14. La garde est-elle alternée (Oui/Non) pour chacun des enfants ou personnes à charge ?',
   },
   {
     id: 'dependents-additional-info',
     section: 'Section 1 – Composition du foyer',
     label: 'Informations complémentaires',
     prompt:
-      '14. Souhaitez-vous ajouter d’autres informations utiles concernant les enfants ou personnes à charge ?',
+      '15. Souhaitez-vous ajouter d’autres informations utiles concernant les enfants ou personnes à charge ?',
   },
   {
     id: 'section2-intro',
@@ -174,42 +181,42 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Situation actuelle (adulte 1)',
     prompt:
-      '15. Pour vous (adulte 1), quelle est votre situation actuelle ? (Salarié(e), Travailleur indépendant / auto-entrepreneur, Demandeur d’emploi indemnisé, Demandeur d’emploi non indemnisé, Étudiant(e), En situation de handicap, Sans activité / au foyer, Retraité(e)).',
+      '16. Pour vous (adulte 1), quelle est votre situation actuelle ? (Salarié(e), Travailleur indépendant / auto-entrepreneur, Demandeur d’emploi indemnisé, Demandeur d’emploi non indemnisé, Étudiant(e), En situation de handicap, Sans activité / au foyer, Retraité(e)).',
   },
   {
     id: 'adult1-details',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Détails situation adulte 1',
     prompt:
-      '16-32. Précisez toutes les informations liées à cette situation (type de contrat, temps de travail, dates, allocations chômage et montants, statut d’indépendant, reconnaissance handicap, aides sociales, date de retraite, etc.). Indiquez « Non applicable » si aucune précision.',
+      '17-33. Précisez toutes les informations liées à cette situation (type de contrat, temps de travail, dates, allocations chômage et montants, statut d’indépendant, reconnaissance handicap, aides sociales, date de retraite, etc.). Indiquez « Non applicable » si aucune précision.',
   },
   {
     id: 'adult2-intent',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Souhaitez-vous renseigner le conjoint',
     prompt:
-      '33. Souhaitez-vous renseigner la situation de votre conjoint(e) ? (Oui / Non / Non applicable).',
+      '34. Souhaitez-vous renseigner la situation de votre conjoint(e) ? (Oui / Non / Non applicable).',
   },
   {
     id: 'adult2-situation',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Situation actuelle (adulte 2)',
     prompt:
-      '34. Si oui, quelle est sa situation actuelle ? (Même liste que pour vous). Répondez « Non applicable » si vous n’êtes pas en couple ou ne souhaitez pas renseigner.',
+      '35. Si oui, quelle est sa situation actuelle ? (Même liste que pour vous). Répondez « Non applicable » si vous n’êtes pas en couple ou ne souhaitez pas renseigner.',
   },
   {
     id: 'adult2-details',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Détails situation adulte 2',
     prompt:
-      '35. Précisez les informations complémentaires pour votre conjoint(e) (type de contrat, dates, allocations, aides, etc.) ou indiquez « Non applicable ».',
+      '36. Précisez les informations complémentaires pour votre conjoint(e) (type de contrat, dates, allocations, aides, etc.) ou indiquez « Non applicable ».',
   },
   {
     id: 'pregnancy-info',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Grossesse',
     prompt:
-      '34-35. Pour chaque femme du foyer âgée de 15 à 50 ans (vous et/ou votre conjoint[e]), indiquez si une grossesse est en cours et depuis combien de mois (moins de 3 mois, 3-6 mois, plus de 6 mois). Répondez « Non » ou « Non applicable » si aucune grossesse.',
+      '35-36. Pour chaque femme du foyer âgée de 15 à 50 ans (vous et/ou votre conjoint[e]), indiquez si une grossesse est en cours et depuis combien de mois (moins de 3 mois, 3-6 mois, plus de 6 mois). Répondez « Non » ou « Non applicable » si aucune grossesse.',
   },
   {
     id: 'section3-intro',

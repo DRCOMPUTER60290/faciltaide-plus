@@ -170,6 +170,18 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Scolarité des enfants / personnes à charge',
     prompt:
       '13. Pour chaque enfant ou personne à charge, précisez la situation scolaire (Non scolarisé, Maternelle, Élémentaire, Collège, Lycée, Études supérieures, Apprentissage, Enseignement spécialisé, Autre). Indiquez « Non applicable » si aucun.',
+    options: [
+      'Non scolarisé',
+      'Maternelle',
+      'Élémentaire',
+      'Collège',
+      'Lycée',
+      'Études supérieures',
+      'Apprentissage',
+      'Enseignement spécialisé',
+      'Autre',
+      'Non applicable',
+    ],
   },
   {
     id: 'dependents-shared-custody',
@@ -197,6 +209,16 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Situation actuelle (adulte 1)',
     prompt:
       '16. Pour vous (adulte 1), quelle est votre situation actuelle ? (Salarié(e), Travailleur indépendant / auto-entrepreneur, Demandeur d’emploi indemnisé, Demandeur d’emploi non indemnisé, Étudiant(e), En situation de handicap, Sans activité / au foyer, Retraité(e)).',
+    options: [
+      'Salarié(e)',
+      'Travailleur indépendant / auto-entrepreneur',
+      'Demandeur d’emploi indemnisé',
+      'Demandeur d’emploi non indemnisé',
+      'Étudiant(e)',
+      'En situation de handicap',
+      'Sans activité / au foyer',
+      'Retraité(e)',
+    ],
   },
   {
     id: 'adult1-details',
@@ -211,6 +233,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Souhaitez-vous renseigner le conjoint',
     prompt:
       '34. Souhaitez-vous renseigner la situation de votre conjoint(e) ? (Oui / Non / Non applicable).',
+    options: ['Oui', 'Non', 'Non applicable'],
   },
   {
     id: 'adult2-situation',
@@ -218,6 +241,17 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Situation actuelle (adulte 2)',
     prompt:
       '35. Si oui, quelle est sa situation actuelle ? (Même liste que pour vous). Répondez « Non applicable » si vous n’êtes pas en couple ou ne souhaitez pas renseigner.',
+    options: [
+      'Salarié(e)',
+      'Travailleur indépendant / auto-entrepreneur',
+      'Demandeur d’emploi indemnisé',
+      'Demandeur d’emploi non indemnisé',
+      'Étudiant(e)',
+      'En situation de handicap',
+      'Sans activité / au foyer',
+      'Retraité(e)',
+      'Non applicable',
+    ],
   },
   {
     id: 'adult2-details',
@@ -232,6 +266,13 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Grossesse',
     prompt:
       '35-36. Pour chaque femme du foyer âgée de 15 à 50 ans (vous et/ou votre conjoint[e]), indiquez si une grossesse est en cours et depuis combien de mois (moins de 3 mois, 3-6 mois, plus de 6 mois). Répondez « Non » ou « Non applicable » si aucune grossesse.',
+    options: [
+      'Moins de 3 mois',
+      '3-6 mois',
+      'Plus de 6 mois',
+      'Non',
+      'Non applicable',
+    ],
   },
   {
     id: 'section3-intro',

@@ -162,6 +162,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Sexe des enfants / personnes à charge',
     prompt:
       '12. Pour chaque enfant ou personne à charge, indiquez le sexe.',
+    options: ['Féminin', 'Masculin', 'Non binaire', 'Non précisé', 'Non applicable'],
   },
   {
     id: 'dependents-schooling',

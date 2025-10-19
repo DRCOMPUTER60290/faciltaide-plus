@@ -124,6 +124,15 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Statut conjugal',
     prompt:
       '8. Quel est votre statut conjugal ? (Marié(e), Pacsé(e), Union libre, etc.) Indiquez « Non applicable » si vous vivez seul(e).',
+    options: [
+      'Marié(e)',
+      'Pacsé(e)',
+      'Union libre',
+      'Divorcé(e)',
+      'Séparé(e)',
+      'Veuf(ve)',
+      'Non applicable',
+    ],
   },
   {
     id: 'dependents-any',

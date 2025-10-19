@@ -10,7 +10,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   Share,
+  Modal,
 } from 'react-native';
+import DateTimePicker, {
+  DateTimePickerAndroid,
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Bot, History as HistoryIcon, Sparkles } from 'lucide-react-native';
@@ -362,10 +367,139 @@ export default function ChatScreen() {
   const [chatInput, setChatInput] = useState('');
   const [chatError, setChatError] = useState<string | null>(null);
   const [isChatFinished, setIsChatFinished] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [pendingBirthDate, setPendingBirthDate] = useState<Date | null>(null);
 
   const chatScrollRef = useRef<ScrollView | null>(null);
 
   const chatSteps = useMemo(() => CHAT_PLAN_STEPS, []);
+  const activeChatStep = chatSteps[currentChatStep] ?? null;
+
+  const minimumBirthDate = useMemo(() => new Date(1900, 0, 1), []);
+  const maximumBirthDate = useMemo(() => new Date(), []);
+  const defaultBirthDate = useMemo(() => {
+    const today = new Date();
+    return new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+  }, []);
+
+  const isBirthDateQuestion = useMemo(() => {
+    if (!activeChatStep || activeChatStep.type === 'info') {
+      return false;
+    }
+
+    const normalizedText = `${activeChatStep.label ?? ''} ${activeChatStep.prompt}`.toLowerCase();
+    return activeChatStep.id.includes('birth-date') || normalizedText.includes('date de naissance');
+  }, [activeChatStep]);
+
+  const parseBirthDateInput = useCallback((value: string): Date | null => {
+    const trimmed = value.trim();
+    const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) {
+      return null;
+    }
+
+    const day = Number.parseInt(match[1], 10);
+    const month = Number.parseInt(match[2], 10) - 1;
+    const year = Number.parseInt(match[3], 10);
+
+    const candidate = new Date(year, month, day);
+    if (
+      candidate.getFullYear() !== year ||
+      candidate.getMonth() !== month ||
+      candidate.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return candidate;
+  }, []);
+
+  const formatBirthDate = useCallback((date: Date): string => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  }, []);
+
+  const handleBirthDateSelected = useCallback(
+    (date: Date) => {
+      const clampedTime = Math.min(
+        Math.max(date.getTime(), minimumBirthDate.getTime()),
+        maximumBirthDate.getTime(),
+      );
+      const clampedDate = new Date(clampedTime);
+      setChatInput(formatBirthDate(clampedDate));
+      setChatError(null);
+    },
+    [formatBirthDate, maximumBirthDate, minimumBirthDate],
+  );
+
+  const handleDatePickerChange = useCallback(
+    (_event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (Platform.OS === 'ios') {
+        if (selectedDate) {
+          setPendingBirthDate(selectedDate);
+        }
+      }
+    },
+    [],
+  );
+
+  const handleDatePickerCancel = useCallback(() => {
+    setIsDatePickerVisible(false);
+  }, []);
+
+  const handleDatePickerConfirm = useCallback(() => {
+    if (pendingBirthDate) {
+      handleBirthDateSelected(pendingBirthDate);
+    }
+    setIsDatePickerVisible(false);
+  }, [handleBirthDateSelected, pendingBirthDate]);
+
+  const handleOpenBirthDatePicker = useCallback(() => {
+    if (!isBirthDateQuestion) {
+      return;
+    }
+
+    const initialDate = parseBirthDateInput(chatInput) ?? pendingBirthDate ?? defaultBirthDate;
+
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: initialDate,
+        mode: 'date',
+        display: 'calendar',
+        maximumDate: maximumBirthDate,
+        minimumDate: minimumBirthDate,
+        onChange: (event: DateTimePickerEvent, selectedDate?: Date) => {
+          if (event.type === 'set' && selectedDate) {
+            handleBirthDateSelected(selectedDate);
+          }
+        },
+      });
+      return;
+    }
+
+    if (Platform.OS === 'ios') {
+      setPendingBirthDate(initialDate);
+      setIsDatePickerVisible(true);
+    }
+  }, [
+    chatInput,
+    defaultBirthDate,
+    handleBirthDateSelected,
+    isBirthDateQuestion,
+    maximumBirthDate,
+    minimumBirthDate,
+    parseBirthDateInput,
+    pendingBirthDate,
+  ]);
+
+  useEffect(() => {
+    if (!isBirthDateQuestion) {
+      setIsDatePickerVisible(false);
+      setPendingBirthDate(null);
+    }
+  }, [isBirthDateQuestion]);
 
   const appendNextPrompts = useCallback(
     (baseMessages: ChatMessage[], startIndex: number) => {
@@ -565,7 +699,7 @@ export default function ChatScreen() {
       currentChatStep + 1,
     );
 
-    const finalMessages = finished
+    const finalMessages: ChatMessage[] = finished
       ? [
           ...messages,
           {
@@ -837,6 +971,15 @@ export default function ChatScreen() {
                     </TouchableOpacity>
                   </View>
 
+                  {isBirthDateQuestion && Platform.OS !== 'web' && (
+                    <TouchableOpacity
+                      style={styles.datePickerButton}
+                      onPress={handleOpenBirthDatePicker}
+                      activeOpacity={0.85}>
+                      <Text style={styles.datePickerButtonText}>Sélectionner dans le calendrier</Text>
+                    </TouchableOpacity>
+                  )}
+
                   {chatError && <Text style={styles.chatError}>{chatError}</Text>}
 
                   <View style={styles.chatActions}>
@@ -863,11 +1006,46 @@ export default function ChatScreen() {
                         ? guidedSummary
                         : 'Répondez aux questions pour générer automatiquement un résumé complet.'}
                     </Text>
-                  </View>
                 </View>
+
+                {Platform.OS === 'ios' && (
+                  <Modal
+                    transparent
+                    animationType="fade"
+                    visible={isDatePickerVisible}
+                    onRequestClose={handleDatePickerCancel}>
+                    <View style={styles.datePickerModalBackdrop}>
+                      <View style={styles.datePickerModalContent}>
+                        <Text style={styles.datePickerModalTitle}>Sélectionnez une date de naissance</Text>
+                        <DateTimePicker
+                          value={pendingBirthDate ?? parseBirthDateInput(chatInput) ?? defaultBirthDate}
+                          mode="date"
+                          display="spinner"
+                          locale="fr-FR"
+                          maximumDate={maximumBirthDate}
+                          minimumDate={minimumBirthDate}
+                          onChange={handleDatePickerChange}
+                        />
+                        <View style={styles.datePickerModalActions}>
+                          <TouchableOpacity
+                            style={styles.datePickerModalActionButton}
+                            onPress={handleDatePickerCancel}>
+                            <Text style={styles.datePickerModalActionText}>Annuler</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.datePickerModalPrimaryButton}
+                            onPress={handleDatePickerConfirm}>
+                            <Text style={styles.datePickerModalPrimaryButtonText}>Valider</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </Modal>
+                )}
               </View>
-            )}
-          </View>
+            </View>
+          )}
+        </View>
 
           <Text style={styles.label}>Décrivez votre situation :</Text>
           <TextInput
@@ -1130,6 +1308,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
   },
+  datePickerButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#4ba3c3',
+    backgroundColor: '#f0f8fc',
+  },
+  datePickerButtonText: {
+    color: '#2c3e50',
+    fontWeight: '600',
+    fontSize: 13,
+  },
   chatError: {
     color: '#c0392b',
     fontSize: 13,
@@ -1183,6 +1376,57 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#34495e',
     lineHeight: 18,
+  },
+  datePickerModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  datePickerModalContent: {
+    width: '100%',
+    borderRadius: 16,
+    backgroundColor: '#fff',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+  datePickerModalTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2c3e50',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  datePickerModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 16,
+  },
+  datePickerModalActionButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#ecf5fa',
+  },
+  datePickerModalActionText: {
+    color: '#2c3e50',
+    fontWeight: '600',
+  },
+  datePickerModalPrimaryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#4ba3c3',
+  },
+  datePickerModalPrimaryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   label: {
     fontSize: 16,

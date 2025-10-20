@@ -287,14 +287,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Montant allocations chômage (adulte 1)',
     prompt:
-      '21. Quel est le montant mensuel des allocations chômage perçues ? (Fourchettes indicatives).',
-    options: [
-      'Moins de 500 €',
-      '500 € à 1 000 €',
-      '1 001 € à 1 500 €',
-      'Plus de 1 500 €',
-      'Non applicable',
-    ],
+      '21. Quel est le montant mensuel des allocations chômage perçues ? Indiquez le montant en euros ou « Non applicable ».',
   },
   {
     id: 'adult1-self-employed-status',
@@ -383,18 +376,139 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     ],
   },
   {
-    id: 'adult2-details',
+    id: 'adult2-contract-type',
     section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Détails situation adulte 2',
+    label: 'Type de contrat (adulte 2)',
     prompt:
-      '36. Précisez les informations complémentaires pour votre conjoint(e) (type de contrat, dates, allocations, aides, etc.) ou indiquez « Non applicable ».',
+      '36. Quel est le type de contrat actuel de votre conjoint(e) ? (CDI, CDD, Intérim, Fonction publique, Alternance, Autre). Répondez « Non applicable » si nécessaire.',
+    options: [
+      'CDI',
+      'CDD',
+      'Intérim',
+      'Fonction publique',
+      'Alternance / apprentissage',
+      'Travail indépendant',
+      'Autre',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult2-working-time',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Temps de travail (adulte 2)',
+    prompt:
+      '37. Quel est le temps de travail de votre conjoint(e) ? (Temps plein, Temps partiel, Travail de nuit, Travail saisonnier, Autre). Répondez « Non applicable » si nécessaire.',
+    options: [
+      'Temps plein',
+      'Temps partiel',
+      'Travail de nuit',
+      'Travail posté / en horaires décalés',
+      'Travail saisonnier',
+      'Autre',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult2-contract-dates',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Dates clés du contrat (adulte 2)',
+    prompt:
+      '38. Disposez-vous de dates importantes à communiquer pour le contrat de votre conjoint(e) ? (Date de début, date de fin, renouvellement, période d’essai).',
+    options: [
+      'Date de début connue',
+      'Date de fin connue',
+      'Renouvellement prévu',
+      'En période d’essai',
+      'Contrat sans date de fin',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult2-unemployment-benefits',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Allocations chômage (adulte 2)',
+    prompt:
+      '39. Votre conjoint(e) perçoit-il(elle) des allocations chômage ? (Oui, en cours d’instruction, Non).',
+    options: [
+      'Oui, indemnisé(e)',
+      'Oui, en cours d’instruction',
+      'Non',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult2-unemployment-amount',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Montant allocations chômage (adulte 2)',
+    prompt:
+      '40. Quel est le montant mensuel des allocations chômage perçues par votre conjoint(e) ? Indiquez le montant en euros ou « Non applicable ».',
+  },
+  {
+    id: 'adult2-self-employed-status',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Statut d’indépendant (adulte 2)',
+    prompt:
+      '41. Si votre conjoint(e) est travailleur indépendant ou auto-entrepreneur, quel est son statut ? (Micro-entreprise, Profession libérale, Artisan / commerçant, Autre). Répondez « Non applicable » si nécessaire.',
+    options: [
+      'Micro-entreprise',
+      'Profession libérale',
+      'Artisan / commerçant',
+      'Agriculteur',
+      'Autre',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult2-disability-recognition',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Reconnaissance handicap (adulte 2)',
+    prompt:
+      '42. Votre conjoint(e) dispose-t-il(elle) d’une reconnaissance de handicap ? (RQTH, AAH, Autre, Non).',
+    options: [
+      'Oui, RQTH',
+      'Oui, AAH',
+      'Oui, autre reconnaissance',
+      'Demande en cours',
+      'Non',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult2-social-aids',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Aides sociales perçues (adulte 2)',
+    prompt:
+      '43. Votre conjoint(e) perçoit-il(elle) d’autres aides sociales liées à sa situation professionnelle ? (Prime d’activité, Aides CAF, Aides régionales, Autre).',
+    options: [
+      'Prime d’activité',
+      'Aides CAF',
+      'Aides régionales / départementales',
+      'Aides de l’employeur',
+      'Autre',
+      'Aucune',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult2-retirement-date',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Date de retraite (adulte 2)',
+    prompt:
+      '44. Votre conjoint(e) est-il(elle) déjà à la retraite ou a-t-il(elle) une date de départ prévue ? (Déjà retraité(e), Départ prévu, Pas encore prévu).',
+    options: [
+      'Déjà retraité(e)',
+      'Départ prévu dans l’année',
+      'Départ prévu au-delà d’un an',
+      'Pas encore prévu',
+      'Non applicable',
+    ],
   },
   {
     id: 'pregnancy-info',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Grossesse',
     prompt:
-      '35-36. Pour chaque femme du foyer âgée de 15 à 50 ans (vous et/ou votre conjoint[e]), indiquez si une grossesse est en cours et depuis combien de mois (moins de 3 mois, 3-6 mois, plus de 6 mois). Répondez « Non » ou « Non applicable » si aucune grossesse.',
+      '45. Pour chaque femme du foyer âgée de 15 à 50 ans (vous et/ou votre conjoint[e]), indiquez si une grossesse est en cours et depuis combien de mois (moins de 3 mois, 3-6 mois, plus de 6 mois). Répondez « Non » ou « Non applicable » si aucune grossesse.',
     options: [
       'Moins de 3 mois',
       '3-6 mois',

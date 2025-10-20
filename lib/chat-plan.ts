@@ -1,3 +1,9 @@
+export type ChatMultiSelectOption = {
+  label: string;
+  group?: string;
+  description?: string;
+};
+
 export type ChatStep = {
   id: string;
   prompt: string;
@@ -5,7 +11,28 @@ export type ChatStep = {
   label?: string;
   type?: 'info' | 'question';
   options?: string[];
+  multiSelectOptions?: ChatMultiSelectOption[];
+  multiSelectHint?: string;
   shouldAsk?: (answers: Record<string, string>) => boolean;
+};
+
+export const MULTI_SELECT_SEPARATOR = ' ; ';
+
+const splitMultiSelectValues = (value?: string): string[] => {
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+};
+
+export const includesMultiSelectValue = (value: string | undefined, expected: string): boolean => {
+  const normalizedExpected = toComparable(expected);
+
+  return splitMultiSelectValues(value).some((entry) => toComparable(entry) === normalizedExpected);
 };
 
 export const toComparable = (value?: string): string =>
@@ -27,64 +54,122 @@ export const wantsAdult2Details = (answers: Record<string, string>): boolean =>
 
 export const hasDependents = (answers: Record<string, string>): boolean => isYes(answers['dependents-any']);
 
-export const receivesAdult1Unemployment = (answers: Record<string, string>): boolean =>
-  toComparable(answers['adult1-unemployment-benefits']).startsWith('oui');
-
-export const receivesAdult2Unemployment = (answers: Record<string, string>): boolean =>
-  toComparable(answers['adult2-unemployment-benefits']).startsWith('oui');
-
-export const receivesAdult1PrimeActivity = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult1-prime-activity']);
-
-export const receivesAdult1Rsa = (answers: Record<string, string>): boolean => isYes(answers['adult1-rsa']);
-
-export const receivesAdult1HousingBenefits = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult1-housing-benefits']);
-
-export const receivesAdult1FamilyAllowances = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult1-family-allowances']);
-
-export const receivesAdult1Aah = (answers: Record<string, string>): boolean => isYes(answers['adult1-aah']);
-
-export const receivesAdult1InvalidityPension = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult1-invalidity-pension']);
-
-export const receivesAdult2PrimeActivity = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult2-prime-activity']);
-
-export const receivesAdult2Rsa = (answers: Record<string, string>): boolean => isYes(answers['adult2-rsa']);
-
-export const receivesAdult2HousingBenefits = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult2-housing-benefits']);
-
-export const receivesAdult2FamilyAllowances = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult2-family-allowances']);
-
-export const receivesAdult2Aah = (answers: Record<string, string>): boolean => isYes(answers['adult2-aah']);
-
-export const receivesAdult2InvalidityPension = (answers: Record<string, string>): boolean =>
-  isYes(answers['adult2-invalidity-pension']);
-
 export const isAdult1Independent = (answers: Record<string, string>): boolean =>
-  toComparable(answers['adult1-situation']) === 'travailleur independant / auto-entrepreneur';
+  includesMultiSelectValue(answers['adult1-situation'], 'Travailleur indépendant / auto-entrepreneur');
 
 export const isAdult2Independent = (answers: Record<string, string>): boolean =>
-  toComparable(answers['adult2-situation']) === 'travailleur independant / auto-entrepreneur';
+  includesMultiSelectValue(answers['adult2-situation'], 'Travailleur indépendant / auto-entrepreneur');
 
 export const isAdult1Rqth = (answers: Record<string, string>): boolean =>
+  includesMultiSelectValue(answers['adult1-situation'], 'En situation de handicap') ||
   toComparable(answers['adult1-disability-recognition']).includes('rqth');
 
 export const isAdult2Rqth = (answers: Record<string, string>): boolean =>
+  includesMultiSelectValue(answers['adult2-situation'], 'En situation de handicap') ||
   toComparable(answers['adult2-disability-recognition']).includes('rqth');
 
 export const wantsAdult2RqthDetails = (answers: Record<string, string>): boolean =>
   wantsAdult2Details(answers) && isAdult2Rqth(answers);
 
 export const isAdult1Employee = (answers: Record<string, string>): boolean =>
-  toComparable(answers['adult1-situation']) === 'salariee';
+  includesMultiSelectValue(answers['adult1-situation'], 'Salarié(e)');
 
 export const isAdult2Employee = (answers: Record<string, string>): boolean =>
-  toComparable(answers['adult2-situation']) === 'salariee';
+  includesMultiSelectValue(answers['adult2-situation'], 'Salarié(e)');
+
+const hasAdult1Situation = (answers: Record<string, string>, label: string): boolean =>
+  includesMultiSelectValue(answers['adult1-situation'], label);
+
+const hasAdult2Situation = (answers: Record<string, string>, label: string): boolean =>
+  includesMultiSelectValue(answers['adult2-situation'], label);
+
+export const isAdult1JobSeeker = (answers: Record<string, string>): boolean =>
+  hasAdult1Situation(answers, 'Demandeur d’emploi');
+
+export const isAdult2JobSeeker = (answers: Record<string, string>): boolean =>
+  hasAdult2Situation(answers, 'Demandeur d’emploi');
+
+export const isAdult1JournalistGroup = (answers: Record<string, string>): boolean =>
+  hasAdult1Situation(answers, 'Journaliste, assistant maternel ou familial');
+
+export const isAdult2JournalistGroup = (answers: Record<string, string>): boolean =>
+  hasAdult2Situation(answers, 'Journaliste, assistant maternel ou familial');
+
+export const isAdult1Student = (answers: Record<string, string>): boolean =>
+  hasAdult1Situation(answers, 'Étudiant(e)');
+
+export const isAdult2Student = (answers: Record<string, string>): boolean =>
+  hasAdult2Situation(answers, 'Étudiant(e)');
+
+const hasAdult1IncomeSelection = (answers: Record<string, string>, label: string): boolean =>
+  includesMultiSelectValue(answers['adult1-income-types'], label);
+
+const hasAdult2IncomeSelection = (answers: Record<string, string>, label: string): boolean =>
+  includesMultiSelectValue(answers['adult2-income-types'], label);
+
+const ADULT1_INCOME_LABELS = {
+  salary: 'Salaires (adulte 1)',
+  independent: 'Revenus indépendants (adulte 1)',
+  unemployment: 'Allocations chômage (adulte 1)',
+  primeActivity: 'Prime d’activité (adulte 1)',
+  rsa: 'Revenu de solidarité active (adulte 1)',
+  housingBenefits: 'Aides au logement (adulte 1)',
+  familyAllowances: 'Allocations familiales (adulte 1)',
+  aah: 'Allocation aux adultes handicapés (adulte 1)',
+  invalidityPension: 'Pension d’invalidité (adulte 1)',
+  pensions: 'Pensions alimentaires / retraites / rentes (adulte 1)',
+  other: 'Autres ressources (adulte 1)',
+} as const;
+
+const ADULT2_INCOME_LABELS = {
+  salary: 'Salaires (adulte 2)',
+  independent: 'Revenus indépendants (adulte 2)',
+  unemployment: 'Allocations chômage (adulte 2)',
+  primeActivity: 'Prime d’activité (adulte 2)',
+  rsa: 'Revenu de solidarité active (adulte 2)',
+  housingBenefits: 'Aides au logement (adulte 2)',
+  familyAllowances: 'Allocations familiales (adulte 2)',
+  aah: 'Allocation aux adultes handicapés (adulte 2)',
+  invalidityPension: 'Pension d’invalidité (adulte 2)',
+  pensions: 'Pensions alimentaires / retraites / rentes (adulte 2)',
+  other: 'Autres ressources (adulte 2)',
+} as const;
+
+export const receivesAdult1PrimeActivity = (answers: Record<string, string>): boolean =>
+  hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.primeActivity);
+
+export const receivesAdult1Rsa = (answers: Record<string, string>): boolean =>
+  hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.rsa);
+
+export const receivesAdult1HousingBenefits = (answers: Record<string, string>): boolean =>
+  hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.housingBenefits);
+
+export const receivesAdult1FamilyAllowances = (answers: Record<string, string>): boolean =>
+  hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.familyAllowances);
+
+export const receivesAdult1Aah = (answers: Record<string, string>): boolean =>
+  hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.aah);
+
+export const receivesAdult1InvalidityPension = (answers: Record<string, string>): boolean =>
+  hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.invalidityPension);
+
+export const receivesAdult2PrimeActivity = (answers: Record<string, string>): boolean =>
+  hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.primeActivity);
+
+export const receivesAdult2Rsa = (answers: Record<string, string>): boolean =>
+  hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.rsa);
+
+export const receivesAdult2HousingBenefits = (answers: Record<string, string>): boolean =>
+  hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.housingBenefits);
+
+export const receivesAdult2FamilyAllowances = (answers: Record<string, string>): boolean =>
+  hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.familyAllowances);
+
+export const receivesAdult2Aah = (answers: Record<string, string>): boolean =>
+  hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.aah);
+
+export const receivesAdult2InvalidityPension = (answers: Record<string, string>): boolean =>
+  hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.invalidityPension);
 
 const tenantStatuses = new Set([
   'locataire vide',
@@ -283,17 +368,54 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Situation actuelle (adulte 1)',
     prompt:
-      '16. Pour vous (adulte 1), quelle est votre situation actuelle ? (Salarié(e), Travailleur indépendant / auto-entrepreneur, Demandeur d’emploi indemnisé, Demandeur d’emploi non indemnisé, Étudiant(e), En situation de handicap, Sans activité / au foyer, Retraité(e)).',
-    options: [
-      'Salarié(e)',
-      'Travailleur indépendant / auto-entrepreneur',
-      'Demandeur d’emploi indemnisé',
-      'Demandeur d’emploi non indemnisé',
-      'Étudiant(e)',
-      'En situation de handicap',
-      'Sans activité / au foyer',
-      'Retraité(e)',
+      '16. Pour vous (adulte 1), quelles situations s’appliquent actuellement ? Vous pouvez sélectionner plusieurs cas.',
+    multiSelectHint: 'Sélectionnez toutes les situations qui correspondent à votre parcours.',
+    multiSelectOptions: [
+      { label: 'Salarié(e)', group: 'Activité professionnelle' },
+      {
+        label: 'Travailleur indépendant / auto-entrepreneur',
+        group: 'Activité professionnelle',
+      },
+      { label: 'En reprise d’activité', group: 'Activité professionnelle' },
+      { label: 'En congé parental', group: 'Situation familiale' },
+      { label: 'Demandeur d’emploi', group: 'Accompagnement vers l’emploi' },
+      { label: 'En CER ou en PPAE', group: 'Accompagnement vers l’emploi' },
+      {
+        label: 'Journaliste, assistant maternel ou familial',
+        group: 'Professions spécifiques',
+      },
+      { label: 'Étudiant(e)', group: 'Études' },
+      { label: 'En situation de handicap', group: 'Situation de santé' },
+      { label: 'Inapte au travail', group: 'Situation de santé' },
+      { label: 'En situation d’invalidité', group: 'Situation de santé' },
+      { label: 'Régime Alsace Moselle', group: 'Régimes particuliers' },
+      { label: 'Sans activité / au foyer', group: 'Autres situations' },
+      { label: 'Retraité(e)', group: 'Autres situations' },
     ],
+  },
+  {
+    id: 'adult1-jobseeker-details',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Précisions demandeur d’emploi (adulte 1)',
+    prompt:
+      'Indiquez la date de fin de votre dernier contrat de travail et, si applicable, la date de début de votre indemnisation chômage. Laissez vide si non concerné.',
+    shouldAsk: isAdult1JobSeeker,
+  },
+  {
+    id: 'adult1-journalist-role',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Profession spécifique (adulte 1)',
+    prompt: 'Précisez si vous exercez en tant que journaliste, assistant maternel ou assistant familial.',
+    options: ['Journaliste', 'Assistant maternel', 'Assistant familial'],
+    shouldAsk: isAdult1JournalistGroup,
+  },
+  {
+    id: 'adult1-student-scholarship',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Bourse étudiant (adulte 1)',
+    prompt: 'En tant qu’étudiant(e), êtes-vous boursier(ère) ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: isAdult1Student,
   },
   {
     id: 'adult1-contract-type',
@@ -345,27 +467,6 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
       'Non applicable',
     ],
     shouldAsk: isAdult1Employee,
-  },
-  {
-    id: 'adult1-unemployment-benefits',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Allocations chômage (adulte 1)',
-    prompt:
-      '20. Percevez-vous des allocations chômage ? (Oui, en cours d’instruction, Non).',
-    options: [
-      'Oui, indemnisé(e)',
-      'Oui, en cours d’instruction',
-      'Non',
-      'Non applicable',
-    ],
-  },
-  {
-    id: 'adult1-unemployment-amount',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Montant allocations chômage (adulte 1)',
-    prompt:
-      '21. Quel est le montant mensuel des allocations chômage perçues ? Indiquez le montant en euros ou « Non applicable ».',
-    shouldAsk: receivesAdult1Unemployment,
   },
   {
     id: 'adult1-self-employed-status',
@@ -459,19 +560,57 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Situation actuelle (adulte 2)',
     prompt:
-      '35. Si oui, quelle est sa situation actuelle ? (Même liste que pour vous). Répondez « Non applicable » si vous n’êtes pas en couple ou ne souhaitez pas renseigner.',
-    options: [
-      'Salarié(e)',
-      'Travailleur indépendant / auto-entrepreneur',
-      'Demandeur d’emploi indemnisé',
-      'Demandeur d’emploi non indemnisé',
-      'Étudiant(e)',
-      'En situation de handicap',
-      'Sans activité / au foyer',
-      'Retraité(e)',
-      'Non applicable',
+      '35. Si oui, quelles situations s’appliquent à votre conjoint(e) ? Sélectionnez toutes les réponses pertinentes ou « Non applicable » le cas échéant.',
+    multiSelectHint:
+      'Sélectionnez l’ensemble des situations correspondant à votre conjoint(e) ou « Non applicable » si vous ne souhaitez pas répondre.',
+    multiSelectOptions: [
+      { label: 'Salarié(e)', group: 'Activité professionnelle' },
+      {
+        label: 'Travailleur indépendant / auto-entrepreneur',
+        group: 'Activité professionnelle',
+      },
+      { label: 'En reprise d’activité', group: 'Activité professionnelle' },
+      { label: 'En congé parental', group: 'Situation familiale' },
+      { label: 'Demandeur d’emploi', group: 'Accompagnement vers l’emploi' },
+      { label: 'En CER ou en PPAE', group: 'Accompagnement vers l’emploi' },
+      {
+        label: 'Journaliste, assistant maternel ou familial',
+        group: 'Professions spécifiques',
+      },
+      { label: 'Étudiant(e)', group: 'Études' },
+      { label: 'En situation de handicap', group: 'Situation de santé' },
+      { label: 'Inapte au travail', group: 'Situation de santé' },
+      { label: 'En situation d’invalidité', group: 'Situation de santé' },
+      { label: 'Régime Alsace Moselle', group: 'Régimes particuliers' },
+      { label: 'Sans activité / au foyer', group: 'Autres situations' },
+      { label: 'Retraité(e)', group: 'Autres situations' },
+      { label: 'Non applicable', group: 'Autres situations' },
     ],
     shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-jobseeker-details',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Précisions demandeur d’emploi (adulte 2)',
+    prompt:
+      'Pour votre conjoint(e), précisez la date de fin du dernier contrat de travail et, si applicable, la date de début de son indemnisation chômage. Laissez vide si non concerné.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JobSeeker(answers),
+  },
+  {
+    id: 'adult2-journalist-role',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Profession spécifique (adulte 2)',
+    prompt: 'Votre conjoint(e) exerce-t-il(elle) comme journaliste, assistant maternel ou assistant familial ?',
+    options: ['Journaliste', 'Assistant maternel', 'Assistant familial'],
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JournalistGroup(answers),
+  },
+  {
+    id: 'adult2-student-scholarship',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Bourse étudiant (adulte 2)',
+    prompt: 'Votre conjoint(e) étudiant(e) est-il(elle) boursier(ère) ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2Student(answers),
   },
   {
     id: 'adult2-contract-type',
@@ -523,28 +662,6 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
       'Non applicable',
     ],
     shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2Employee(answers),
-  },
-  {
-    id: 'adult2-unemployment-benefits',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Allocations chômage (adulte 2)',
-    prompt:
-      '39. Votre conjoint(e) perçoit-il(elle) des allocations chômage ? (Oui, en cours d’instruction, Non).',
-    options: [
-      'Oui, indemnisé(e)',
-      'Oui, en cours d’instruction',
-      'Non',
-      'Non applicable',
-    ],
-    shouldAsk: wantsAdult2Details,
-  },
-  {
-    id: 'adult2-unemployment-amount',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Montant allocations chômage (adulte 2)',
-    prompt:
-      '40. Quel est le montant mensuel des allocations chômage perçues par votre conjoint(e) ? Indiquez le montant en euros ou « Non applicable ».',
-    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2Unemployment(answers),
   },
   {
     id: 'adult2-self-employed-status',
@@ -859,107 +976,90 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt: '🔷 SECTION 4 – RESSOURCES ET REVENUS',
   },
   {
+    id: 'adult1-income-types',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Catégories de revenus (adulte 1)',
+    prompt:
+      'Sélectionnez les catégories de revenus perçues par l’adulte 1 au cours des 12 derniers mois, puis indiquez les montants correspondants dans les questions suivantes.',
+    multiSelectHint: 'Cochez toutes les catégories applicables puis validez.',
+    multiSelectOptions: [
+      { label: ADULT1_INCOME_LABELS.salary, group: 'Revenus d’activité' },
+      { label: ADULT1_INCOME_LABELS.independent, group: 'Revenus d’activité' },
+      { label: ADULT1_INCOME_LABELS.unemployment, group: 'Revenus de remplacement' },
+      { label: ADULT1_INCOME_LABELS.primeActivity, group: 'Prestations sociales' },
+      { label: ADULT1_INCOME_LABELS.rsa, group: 'Prestations sociales' },
+      { label: ADULT1_INCOME_LABELS.housingBenefits, group: 'Prestations sociales' },
+      { label: ADULT1_INCOME_LABELS.familyAllowances, group: 'Prestations sociales' },
+      { label: ADULT1_INCOME_LABELS.aah, group: 'Prestations sociales' },
+      { label: ADULT1_INCOME_LABELS.invalidityPension, group: 'Prestations sociales' },
+      { label: ADULT1_INCOME_LABELS.pensions, group: 'Pensions et rentes' },
+      { label: ADULT1_INCOME_LABELS.other, group: 'Autres ressources' },
+    ],
+  },
+  {
     id: 'salary-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Salaires adulte 1',
     prompt:
-      '1-3. Au cours des 12 derniers mois, avez-vous perçu un salaire ? Si oui, indiquez le montant net mensuel moyen (3 derniers mois) et précisez primes/heures supplémentaires/indemnités. Indiquez « Non » si aucun salaire.',
+      'Pour les salaires perçus par l’adulte 1, précisez le montant net mensuel moyen (sur les 3 derniers mois) et détaillez primes, heures supplémentaires ou indemnités.',
+    shouldAsk: (answers) => hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.salary),
   },
   {
     id: 'independent-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Revenus indépendants adulte 1',
     prompt:
-      '4-6. Avez-vous des revenus d’activité indépendante ? Si oui, indiquez le chiffre d’affaires mensuel moyen et le revenu net estimé (après charges).',
+      'Pour les revenus d’activité indépendante de l’adulte 1, indiquez le chiffre d’affaires mensuel moyen et le revenu net estimé après charges.',
+    shouldAsk: (answers) => hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.independent),
   },
   {
     id: 'unemployment-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Allocation chômage adulte 1',
-    prompt: '7-8. Percevez-vous une allocation chômage (ARE) ? Si oui, indiquez le montant mensuel net.',
-  },
-  {
-    id: 'adult1-prime-activity',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Prime d’activité adulte 1',
-    prompt: '9. Percevez-vous la prime d’activité ? (Oui / Non)',
-    options: ['Oui', 'Non'],
+    prompt:
+      'Indiquez le montant mensuel net de l’allocation chômage (ARE) perçue par l’adulte 1 et précisez la période couverte si nécessaire.',
+    shouldAsk: (answers) => hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.unemployment),
   },
   {
     id: 'adult1-prime-activity-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant prime d’activité adulte 1',
-    prompt: 'Indiquez le montant mensuel net perçu pour la prime d’activité.',
+    prompt: 'Indiquez le montant mensuel net perçu pour la prime d’activité (adulte 1).',
     shouldAsk: receivesAdult1PrimeActivity,
-  },
-  {
-    id: 'adult1-rsa',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'RSA adulte 1',
-    prompt: '10. Percevez-vous le Revenu de solidarité active (RSA) ? (Oui / Non)',
-    options: ['Oui', 'Non'],
   },
   {
     id: 'adult1-rsa-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant RSA adulte 1',
-    prompt: 'Indiquez le montant mensuel net perçu pour le RSA.',
+    prompt: 'Indiquez le montant mensuel net perçu pour le RSA (adulte 1).',
     shouldAsk: receivesAdult1Rsa,
-  },
-  {
-    id: 'adult1-housing-benefits',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Aides au logement adulte 1',
-    prompt: '11. Percevez-vous une aide au logement ? (Oui / Non)',
-    options: ['Oui', 'Non'],
   },
   {
     id: 'adult1-housing-benefits-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant aide au logement adulte 1',
-    prompt: 'Indiquez le montant mensuel net perçu pour l’aide au logement.',
+    prompt: 'Indiquez le montant mensuel net perçu pour les aides au logement (adulte 1).',
     shouldAsk: receivesAdult1HousingBenefits,
-  },
-  {
-    id: 'adult1-family-allowances',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Allocations familiales adulte 1',
-    prompt: '12. Percevez-vous des allocations familiales ? (Oui / Non)',
-    options: ['Oui', 'Non'],
   },
   {
     id: 'adult1-family-allowances-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant allocations familiales adulte 1',
-    prompt: 'Indiquez le montant mensuel net perçu pour les allocations familiales.',
+    prompt: 'Indiquez le montant mensuel net perçu pour les allocations familiales (adulte 1).',
     shouldAsk: receivesAdult1FamilyAllowances,
-  },
-  {
-    id: 'adult1-aah',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'AAH adulte 1',
-    prompt: '13. Percevez-vous l’Allocation aux adultes handicapés (AAH) ? (Oui / Non)',
-    options: ['Oui', 'Non'],
   },
   {
     id: 'adult1-aah-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant AAH adulte 1',
-    prompt: 'Indiquez le montant mensuel net perçu pour l’AAH.',
+    prompt: 'Indiquez le montant mensuel net perçu pour l’AAH (adulte 1).',
     shouldAsk: receivesAdult1Aah,
-  },
-  {
-    id: 'adult1-invalidity-pension',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Pension d’invalidité adulte 1',
-    prompt: '14. Percevez-vous une pension d’invalidité ? (Oui / Non)',
-    options: ['Oui', 'Non'],
   },
   {
     id: 'adult1-invalidity-pension-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant pension d’invalidité adulte 1',
-    prompt: 'Indiquez le montant mensuel net perçu pour la pension d’invalidité.',
+    prompt: 'Indiquez le montant mensuel net perçu pour la pension d’invalidité (adulte 1).',
     shouldAsk: receivesAdult1InvalidityPension,
   },
   {
@@ -967,127 +1067,106 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 4 – Ressources et revenus',
     label: 'Pensions et rentes adulte 1',
     prompt:
-      '15-17. Percevez-vous une pension alimentaire, une pension de retraite ou une rente/indemnité d’assurance ? Précisez les montants mensuels ou indiquez « Non ».',
+      'Précisez les montants mensuels pour les pensions alimentaires, pensions de retraite ou rentes perçues par l’adulte 1.',
+    shouldAsk: (answers) => hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.pensions),
   },
   {
     id: 'other-resources-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Autres ressources adulte 1',
     prompt:
-      '18-22. Avez-vous des revenus de capitaux mobiliers, des revenus locatifs, des revenus exceptionnels, une aide financière régulière d’un proche ou des activités non déclarées générant un revenu ? Précisez les montants ou indiquez « Non ».',
+      'Pour les autres ressources de l’adulte 1 (capitaux mobiliers, revenus locatifs, revenus exceptionnels, aides familiales, activités non déclarées), détaillez les montants et leur nature.',
+    shouldAsk: (answers) => hasAdult1IncomeSelection(answers, ADULT1_INCOME_LABELS.other),
+  },
+  {
+    id: 'adult2-income-types',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Catégories de revenus (adulte 2)',
+    prompt:
+      'Sélectionnez les catégories de revenus perçues par votre conjoint(e) au cours des 12 derniers mois, puis indiquez les montants correspondants dans les questions suivantes.',
+    multiSelectHint: 'Cochez toutes les catégories applicables puis validez.',
+    multiSelectOptions: [
+      { label: ADULT2_INCOME_LABELS.salary, group: 'Revenus d’activité' },
+      { label: ADULT2_INCOME_LABELS.independent, group: 'Revenus d’activité' },
+      { label: ADULT2_INCOME_LABELS.unemployment, group: 'Revenus de remplacement' },
+      { label: ADULT2_INCOME_LABELS.primeActivity, group: 'Prestations sociales' },
+      { label: ADULT2_INCOME_LABELS.rsa, group: 'Prestations sociales' },
+      { label: ADULT2_INCOME_LABELS.housingBenefits, group: 'Prestations sociales' },
+      { label: ADULT2_INCOME_LABELS.familyAllowances, group: 'Prestations sociales' },
+      { label: ADULT2_INCOME_LABELS.aah, group: 'Prestations sociales' },
+      { label: ADULT2_INCOME_LABELS.invalidityPension, group: 'Prestations sociales' },
+      { label: ADULT2_INCOME_LABELS.pensions, group: 'Pensions et rentes' },
+      { label: ADULT2_INCOME_LABELS.other, group: 'Autres ressources' },
+    ],
+    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-salary-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Salaires adulte 2',
     prompt:
-      '1-3 bis. Concernant votre conjoint(e), a-t-il(elle) perçu un salaire au cours des 12 derniers mois ? Si oui, indiquez le montant net mensuel moyen (3 derniers mois) ainsi que primes/heures supplémentaires/indemnités. Indiquez « Non » si aucun salaire.',
-    shouldAsk: wantsAdult2Details,
+      'Pour les salaires perçus par votre conjoint(e), précisez le montant net mensuel moyen (sur les 3 derniers mois) et détaillez primes, heures supplémentaires ou indemnités.',
+    shouldAsk: (answers) =>
+      wantsAdult2Details(answers) && hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.salary),
   },
   {
     id: 'adult2-independent-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Revenus indépendants adulte 2',
     prompt:
-      '4-6 bis. Votre conjoint(e) a-t-il(elle) des revenus d’activité indépendante ? Si oui, indiquez le chiffre d’affaires mensuel moyen et le revenu net estimé (après charges).',
-    shouldAsk: wantsAdult2Details,
+      'Pour les revenus d’activité indépendante de votre conjoint(e), indiquez le chiffre d’affaires mensuel moyen et le revenu net estimé après charges.',
+    shouldAsk: (answers) =>
+      wantsAdult2Details(answers) && hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.independent),
   },
   {
     id: 'adult2-unemployment-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Allocation chômage adulte 2',
     prompt:
-      '7-8 bis. Votre conjoint(e) perçoit-il(elle) une allocation chômage (ARE) ? Si oui, indiquez le montant mensuel net.',
-    shouldAsk: wantsAdult2Details,
-  },
-  {
-    id: 'adult2-prime-activity',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Prime d’activité adulte 2',
-    prompt: '9 bis. Votre conjoint(e) perçoit-il(elle) la prime d’activité ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: wantsAdult2Details,
+      'Indiquez le montant mensuel net de l’allocation chômage (ARE) perçue par votre conjoint(e) et précisez la période couverte si nécessaire.',
+    shouldAsk: (answers) =>
+      wantsAdult2Details(answers) && hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.unemployment),
   },
   {
     id: 'adult2-prime-activity-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant prime d’activité adulte 2',
-    prompt: 'Indiquez le montant mensuel net perçu pour la prime d’activité.',
+    prompt: 'Indiquez le montant mensuel net perçu pour la prime d’activité (adulte 2).',
     shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2PrimeActivity(answers),
-  },
-  {
-    id: 'adult2-rsa',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'RSA adulte 2',
-    prompt: '10 bis. Votre conjoint(e) perçoit-il(elle) le Revenu de solidarité active (RSA) ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-rsa-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant RSA adulte 2',
-    prompt: 'Indiquez le montant mensuel net perçu pour le RSA.',
+    prompt: 'Indiquez le montant mensuel net perçu pour le RSA (adulte 2).',
     shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2Rsa(answers),
-  },
-  {
-    id: 'adult2-housing-benefits',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Aides au logement adulte 2',
-    prompt: '11 bis. Votre conjoint(e) perçoit-il(elle) une aide au logement ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-housing-benefits-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant aide au logement adulte 2',
-    prompt: 'Indiquez le montant mensuel net perçu pour l’aide au logement.',
+    prompt: 'Indiquez le montant mensuel net perçu pour les aides au logement (adulte 2).',
     shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2HousingBenefits(answers),
-  },
-  {
-    id: 'adult2-family-allowances',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Allocations familiales adulte 2',
-    prompt: '12 bis. Votre conjoint(e) perçoit-il(elle) des allocations familiales ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-family-allowances-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant allocations familiales adulte 2',
-    prompt: 'Indiquez le montant mensuel net perçu pour les allocations familiales.',
+    prompt: 'Indiquez le montant mensuel net perçu pour les allocations familiales (adulte 2).',
     shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2FamilyAllowances(answers),
-  },
-  {
-    id: 'adult2-aah',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'AAH adulte 2',
-    prompt: '13 bis. Votre conjoint(e) perçoit-il(elle) l’Allocation aux adultes handicapés (AAH) ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-aah-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant AAH adulte 2',
-    prompt: 'Indiquez le montant mensuel net perçu pour l’AAH.',
+    prompt: 'Indiquez le montant mensuel net perçu pour l’AAH (adulte 2).',
     shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2Aah(answers),
-  },
-  {
-    id: 'adult2-invalidity-pension',
-    section: 'Section 4 – Ressources et revenus',
-    label: 'Pension d’invalidité adulte 2',
-    prompt: '14 bis. Votre conjoint(e) perçoit-il(elle) une pension d’invalidité ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-invalidity-pension-amount',
     section: 'Section 4 – Ressources et revenus',
     label: 'Montant pension d’invalidité adulte 2',
-    prompt: 'Indiquez le montant mensuel net perçu pour la pension d’invalidité.',
+    prompt: 'Indiquez le montant mensuel net perçu pour la pension d’invalidité (adulte 2).',
     shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2InvalidityPension(answers),
   },
   {
@@ -1095,16 +1174,18 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 4 – Ressources et revenus',
     label: 'Pensions et rentes adulte 2',
     prompt:
-      '15-17 bis. Votre conjoint(e) perçoit-il(elle) une pension alimentaire, une pension de retraite ou une rente/indemnité d’assurance ? Précisez les montants mensuels ou indiquez « Non ».',
-    shouldAsk: wantsAdult2Details,
+      'Précisez les montants mensuels pour les pensions alimentaires, pensions de retraite ou rentes perçues par votre conjoint(e).',
+    shouldAsk: (answers) =>
+      wantsAdult2Details(answers) && hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.pensions),
   },
   {
     id: 'adult2-other-resources-info',
     section: 'Section 4 – Ressources et revenus',
     label: 'Autres ressources adulte 2',
     prompt:
-      '18-22 bis. Votre conjoint(e) dispose-t-il(elle) de revenus de capitaux mobiliers, de revenus locatifs, de revenus exceptionnels, d’une aide financière régulière d’un proche ou d’activités non déclarées générant un revenu ? Précisez les montants ou indiquez « Non ».',
-    shouldAsk: wantsAdult2Details,
+      'Pour les autres ressources de votre conjoint(e) (capitaux mobiliers, revenus locatifs, revenus exceptionnels, aides familiales, activités non déclarées), détaillez les montants et leur nature.',
+    shouldAsk: (answers) =>
+      wantsAdult2Details(answers) && hasAdult2IncomeSelection(answers, ADULT2_INCOME_LABELS.other),
   },
   {
     id: 'children-income-info',

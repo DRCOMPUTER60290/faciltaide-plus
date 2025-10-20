@@ -50,6 +50,7 @@ type ChatStep = {
   label?: string;
   type?: 'info' | 'question';
   options?: string[];
+  shouldAsk?: (answers: Record<string, string>) => boolean;
 };
 
 const calculateAge = (birthDate: Date, referenceDate: Date = new Date()): number => {
@@ -62,6 +63,93 @@ const calculateAge = (birthDate: Date, referenceDate: Date = new Date()): number
 
   return age < 0 ? 0 : age;
 };
+
+const toComparable = (value?: string): string =>
+  (value ?? '')
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\u2019']/g, '')
+    .replace(/[()]/g, '')
+    .toLowerCase();
+
+const formatPersonName = (value?: string): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.length) {
+    return null;
+  }
+
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
+const isYes = (value?: string): boolean => toComparable(value) === 'oui';
+
+const isCouple = (answers: Record<string, string>): boolean =>
+  toComparable(answers['living-arrangement']) === 'en couple';
+
+const wantsAdult2Details = (answers: Record<string, string>): boolean =>
+  isCouple(answers) && toComparable(answers['adult2-intent']) === 'oui';
+
+const hasDependents = (answers: Record<string, string>): boolean => isYes(answers['dependents-any']);
+
+const receivesAdult1Unemployment = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult1-unemployment-benefits']).startsWith('oui');
+
+const receivesAdult2Unemployment = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult2-unemployment-benefits']).startsWith('oui');
+
+const isAdult1Independent = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult1-situation']) === 'travailleur independant / auto-entrepreneur';
+
+const isAdult2Independent = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult2-situation']) === 'travailleur independant / auto-entrepreneur';
+
+const isAdult1Employee = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult1-situation']) === 'salariee';
+
+const isAdult2Employee = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult2-situation']) === 'salariee';
+
+const tenantStatuses = new Set([
+  'locataire vide',
+  'locataire meuble',
+  'colocation',
+  'logement social',
+  'logement etudiant',
+]);
+
+const isTenantStatus = (answers: Record<string, string>): boolean =>
+  tenantStatuses.has(toComparable(answers['housing-status']));
+
+const isColocationStatus = (answers: Record<string, string>): boolean =>
+  toComparable(answers['housing-status']) === 'colocation';
+
+const isSocialHousingStatus = (answers: Record<string, string>): boolean =>
+  toComparable(answers['housing-status']) === 'logement social';
+
+const isOwnerStatus = (answers: Record<string, string>): boolean =>
+  toComparable(answers['housing-status']) === 'proprietaire';
+
+const isHostedStatus = (answers: Record<string, string>): boolean =>
+  toComparable(answers['housing-status']) === 'heberge gratuitement';
+
+const isStudentHousingStatus = (answers: Record<string, string>): boolean =>
+  toComparable(answers['housing-status']) === 'logement etudiant';
+
+const isEmergencyHousingStatus = (answers: Record<string, string>): boolean =>
+  toComparable(answers['housing-status']) === 'hebergement durgence / sans domicile';
+
+const receivesHousingAid = (answers: Record<string, string>): boolean => {
+  const normalized = toComparable(answers['housing-housing-aid']);
+  return Boolean(normalized.length) && normalized !== 'aucune' && normalized !== 'non applicable';
+};
+
+const hasMortgagePayments = (answers: Record<string, string>): boolean =>
+  isOwnerStatus(answers) && toComparable(answers['housing-loan-type']) !== 'aucun pret en cours';
 
 const CHAT_PLAN_STEPS: ChatStep[] = [
   {
@@ -102,6 +190,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Prénom du conjoint',
     prompt:
       '5. Si vous vivez en couple, quel est le prénom de votre conjoint(e) ? Répondez « Non applicable » si vous vivez seul(e).',
+    shouldAsk: isCouple,
   },
   {
     id: 'spouse-birth-date',
@@ -109,6 +198,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Date de naissance du conjoint',
     prompt:
       '6. Si vous vivez en couple, quelle est sa date de naissance ? (JJ/MM/AAAA) Répondez « Non applicable » si vous vivez seul(e).',
+    shouldAsk: isCouple,
   },
   {
     id: 'spouse-sex',
@@ -117,6 +207,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt:
       '7. Si vous vivez en couple, quel est son sexe ? Répondez « Non applicable » si vous vivez seul(e).',
     options: ['Masculin', 'Féminin', 'Non applicable'],
+    shouldAsk: isCouple,
   },
   {
     id: 'conjugal-status',
@@ -148,6 +239,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Prénoms des enfants / personnes à charge',
     prompt:
       '10. Pour chaque enfant ou personne à charge, indiquez le prénom. Répondez « Aucun » si personne ne vit avec vous.',
+    shouldAsk: hasDependents,
   },
   {
     id: 'dependents-birth-dates',
@@ -155,6 +247,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Dates de naissance des enfants / personnes à charge',
     prompt:
       '11. Pour chacun, précisez la date de naissance (JJ/MM/AAAA). Répondez « Non applicable » si aucun.',
+    shouldAsk: hasDependents,
   },
   {
     id: 'dependents-sexes',
@@ -163,6 +256,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt:
       '12. Pour chaque enfant ou personne à charge, indiquez le sexe.',
     options: ['Féminin', 'Masculin', 'Non binaire', 'Non précisé', 'Non applicable'],
+    shouldAsk: hasDependents,
   },
   {
     id: 'dependents-schooling',
@@ -182,6 +276,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Autre',
       'Non applicable',
     ],
+    shouldAsk: hasDependents,
   },
   {
     id: 'dependents-shared-custody',
@@ -190,6 +285,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt:
       '14. La garde est-elle alternée (Oui/Non) pour chacun des enfants ou personnes à charge ?',
     options: ['Oui', 'Non'],
+    shouldAsk: hasDependents,
   },
   {
     id: 'dependents-additional-info',
@@ -197,6 +293,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Informations complémentaires',
     prompt:
       '15. Souhaitez-vous ajouter d’autres informations utiles concernant les enfants ou personnes à charge ?',
+    shouldAsk: hasDependents,
   },
   {
     id: 'section2-intro',
@@ -237,6 +334,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Autre',
       'Non applicable',
     ],
+    shouldAsk: (answers) => isAdult1Employee(answers) || isAdult1Independent(answers),
   },
   {
     id: 'adult1-working-time',
@@ -253,6 +351,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Autre',
       'Non applicable',
     ],
+    shouldAsk: isAdult1Employee,
   },
   {
     id: 'adult1-contract-dates',
@@ -268,6 +367,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Contrat sans date de fin',
       'Non applicable',
     ],
+    shouldAsk: isAdult1Employee,
   },
   {
     id: 'adult1-unemployment-benefits',
@@ -288,6 +388,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Montant allocations chômage (adulte 1)',
     prompt:
       '21. Quel est le montant mensuel des allocations chômage perçues ? Indiquez le montant en euros ou « Non applicable ».',
+    shouldAsk: receivesAdult1Unemployment,
   },
   {
     id: 'adult1-self-employed-status',
@@ -303,6 +404,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Autre',
       'Non applicable',
     ],
+    shouldAsk: isAdult1Independent,
   },
   {
     id: 'adult1-disability-recognition',
@@ -356,6 +458,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt:
       '34. Souhaitez-vous renseigner la situation de votre conjoint(e) ? (Oui / Non / Non applicable).',
     options: ['Oui', 'Non', 'Non applicable'],
+    shouldAsk: isCouple,
   },
   {
     id: 'adult2-situation',
@@ -374,6 +477,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Retraité(e)',
       'Non applicable',
     ],
+    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-contract-type',
@@ -391,6 +495,8 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Autre',
       'Non applicable',
     ],
+    shouldAsk: (answers) =>
+      wantsAdult2Details(answers) && (isAdult2Employee(answers) || isAdult2Independent(answers)),
   },
   {
     id: 'adult2-working-time',
@@ -407,6 +513,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Autre',
       'Non applicable',
     ],
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2Employee(answers),
   },
   {
     id: 'adult2-contract-dates',
@@ -422,6 +529,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Contrat sans date de fin',
       'Non applicable',
     ],
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2Employee(answers),
   },
   {
     id: 'adult2-unemployment-benefits',
@@ -435,6 +543,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Non',
       'Non applicable',
     ],
+    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-unemployment-amount',
@@ -442,6 +551,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Montant allocations chômage (adulte 2)',
     prompt:
       '40. Quel est le montant mensuel des allocations chômage perçues par votre conjoint(e) ? Indiquez le montant en euros ou « Non applicable ».',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2Unemployment(answers),
   },
   {
     id: 'adult2-self-employed-status',
@@ -457,6 +567,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Autre',
       'Non applicable',
     ],
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2Independent(answers),
   },
   {
     id: 'adult2-disability-recognition',
@@ -472,6 +583,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Non',
       'Non applicable',
     ],
+    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-social-aids',
@@ -488,6 +600,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Aucune',
       'Non applicable',
     ],
+    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'adult2-retirement-date',
@@ -502,6 +615,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       'Pas encore prévu',
       'Non applicable',
     ],
+    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'pregnancy-info',
@@ -553,30 +667,179 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     ],
   },
   {
-    id: 'housing-details',
+    id: 'housing-rent-amount',
     section: 'Section 3 – Logement',
-    label: 'Détails logement et montants',
+    label: 'Loyer mensuel hors charges',
     prompt:
-      '4-22. Précisez les informations liées à votre statut : loyer hors charges, charges, bail, logement conventionné, colocation, montant des aides logement déjà perçues, mensualités de prêt, type d’hébergement gratuit et contributions, type de logement étudiant, type d’hébergement d’urgence, etc. Indiquez « Non applicable » pour les éléments qui ne vous concernent pas.',
+      '4. Quel est votre loyer mensuel hors charges ? Indiquez le montant en euros ou « Non applicable » si vous ne payez pas de loyer.',
+    shouldAsk: isTenantStatus,
+  },
+  {
+    id: 'housing-charges-amount',
+    section: 'Section 3 – Logement',
+    label: 'Montant des charges mensuelles',
+    prompt:
+      '5. Quel est le montant mensuel des charges liées au logement (eau, chauffage, copropriété) ? Indiquez le montant en euros ou « Non applicable » si aucune charge.',
+    shouldAsk: isTenantStatus,
+  },
+  {
+    id: 'housing-bail-type',
+    section: 'Section 3 – Logement',
+    label: 'Type de bail',
+    prompt: '6. Quel type de bail avez-vous pour ce logement ?',
+    options: [
+      'Bail classique (3 ou 6 ans)',
+      'Bail mobilité',
+      'Bail étudiant',
+      'Bail précaire / dérogatoire',
+      'Je ne sais pas',
+      'Non applicable',
+    ],
+    shouldAsk: isTenantStatus,
+  },
+  {
+    id: 'housing-colocation-structure',
+    section: 'Section 3 – Logement',
+    label: 'Forme de colocation',
+    prompt: '7. Quel est le cadre de votre colocation ?',
+    options: [
+      'Colocation déclarée (bail commun)',
+      'Colocation avec baux individuels',
+      'Chambre chez l’habitant',
+      'Autre situation de colocation',
+      'Non applicable',
+    ],
+    shouldAsk: isColocationStatus,
+  },
+  {
+    id: 'housing-social-type',
+    section: 'Section 3 – Logement',
+    label: 'Type de logement social',
+    prompt: '8. Pour un logement social, précisez le type de structure.',
+    options: [
+      'Logement HLM',
+      'Logement conventionné',
+      'Résidence sociale / foyer',
+      'Autre type de logement social',
+      'Je ne sais pas',
+    ],
+    shouldAsk: isSocialHousingStatus,
+  },
+  {
+    id: 'housing-housing-aid',
+    section: 'Section 3 – Logement',
+    label: 'Aides logement perçues',
+    prompt: '9. Percevez-vous une aide au logement ?',
+    options: [
+      'APL (aide personnalisée au logement)',
+      'ALF (allocation de logement familiale)',
+      'ALS (allocation de logement sociale)',
+      'Autre aide logement',
+      'Aucune',
+      'Non applicable',
+    ],
+    shouldAsk: (answers) =>
+      isTenantStatus(answers) ||
+      isOwnerStatus(answers) ||
+      isHostedStatus(answers) ||
+      isStudentHousingStatus(answers) ||
+      isEmergencyHousingStatus(answers),
+  },
+  {
+    id: 'housing-housing-aid-amount',
+    section: 'Section 3 – Logement',
+    label: 'Montant des aides logement',
+    prompt: '10. Quel est le montant mensuel des aides au logement perçues ? Indiquez le montant en euros.',
+    shouldAsk: receivesHousingAid,
+  },
+  {
+    id: 'housing-loan-type',
+    section: 'Section 3 – Logement',
+    label: 'Type de prêt immobilier',
+    prompt: '11. Quel type de prêt immobilier finance votre logement ?',
+    options: [
+      'Prêt amortissable classique',
+      'Prêt à taux zéro (PTZ)',
+      'Prêt relais',
+      'Aucun prêt en cours',
+      'Autre type de prêt',
+    ],
+    shouldAsk: isOwnerStatus,
+  },
+  {
+    id: 'housing-loan-monthly',
+    section: 'Section 3 – Logement',
+    label: 'Mensualités de prêt',
+    prompt:
+      '12. Quel est le montant mensuel de vos remboursements de prêt immobilier ? Indiquez le montant en euros ou « Non applicable » si aucun prêt.',
+    shouldAsk: hasMortgagePayments,
+  },
+  {
+    id: 'housing-free-host-type',
+    section: 'Section 3 – Logement',
+    label: 'Type d’hébergement gratuit',
+    prompt: '13. Qui vous héberge gratuitement ?',
+    options: [
+      'Famille (parents, enfants)',
+      'Ami(e)s / proches',
+      'Foyer ou association',
+      'Autre',
+    ],
+    shouldAsk: isHostedStatus,
+  },
+  {
+    id: 'housing-free-contribution',
+    section: 'Section 3 – Logement',
+    label: 'Contribution aux charges',
+    prompt:
+      '14. Si vous participez aux charges de ce logement gratuit, indiquez le montant mensuel ou précisez « Non ».',
+    shouldAsk: isHostedStatus,
+  },
+  {
+    id: 'housing-student-type',
+    section: 'Section 3 – Logement',
+    label: 'Type de logement étudiant',
+    prompt: '15. Quel type de logement étudiant occupez-vous ?',
+    options: [
+      'Résidence universitaire CROUS',
+      'Résidence étudiante privée',
+      'Studio / appartement individuel',
+      'Chambre en colocation',
+      'Autre logement étudiant',
+    ],
+    shouldAsk: isStudentHousingStatus,
+  },
+  {
+    id: 'housing-emergency-type',
+    section: 'Section 3 – Logement',
+    label: 'Type d’hébergement d’urgence',
+    prompt: '16. Quel type d’hébergement d’urgence utilisez-vous ?',
+    options: [
+      'Centre d’hébergement d’urgence',
+      'Hôtel social',
+      'Structure associative',
+      'Autre situation d’urgence',
+    ],
+    shouldAsk: isEmergencyHousingStatus,
   },
   {
     id: 'housing-people',
     section: 'Section 3 – Logement',
     label: 'Personnes dans le logement',
-    prompt: '23. Combien de personnes vivent dans ce logement (adultes + enfants, vous compris) ?',
+    prompt: '17. Combien de personnes vivent dans ce logement (adultes + enfants, vous compris) ?',
   },
   {
     id: 'housing-charges',
     section: 'Section 3 – Logement',
     label: 'Répartition des charges',
-    prompt: '24. Êtes-vous uniquement responsable des charges ou les partagez-vous ?',
+    prompt: '18. Êtes-vous uniquement responsable des charges ou les partagez-vous ?',
     options: ['Je suis seul(e) responsable', 'Les charges sont partagées'],
   },
   {
     id: 'housing-continue',
     section: 'Section 3 – Logement',
     label: 'Continuer vers les revenus',
-    prompt: 'Souhaitez-vous continuer vers les ressources et revenus ? (Oui / Non)',
+    prompt: '19. Souhaitez-vous continuer vers les ressources et revenus ? (Oui / Non)',
     options: ['Oui', 'Non'],
   },
   {
@@ -720,6 +983,8 @@ export default function ChatScreen() {
   const [showGuidedAssistant, setShowGuidedAssistant] = useState(false);
 
   const [guidedAnswers, setGuidedAnswers] = useState<Record<string, string>>({});
+  const [postalCodeCities, setPostalCodeCities] = useState<string[]>([]);
+  const [lastPostalCodeLookup, setLastPostalCodeLookup] = useState<string>('');
 
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [currentChatStep, setCurrentChatStep] = useState(0);
@@ -733,6 +998,65 @@ export default function ChatScreen() {
 
   const chatSteps = useMemo(() => CHAT_PLAN_STEPS, []);
   const activeChatStep = chatSteps[currentChatStep] ?? null;
+  const activeChatOptions = useMemo(() => {
+    if (!activeChatStep) {
+      return [] as string[];
+    }
+
+    if (activeChatStep.id === 'housing-city' && postalCodeCities.length > 0) {
+      return postalCodeCities;
+    }
+
+    return activeChatStep.options ?? [];
+  }, [activeChatStep, postalCodeCities]);
+
+  const replaceAdultPlaceholders = useCallback(
+    (text: string, answers: Record<string, string>): string => {
+      if (!text) {
+        return text;
+      }
+
+      let result = text;
+      const primaryName = formatPersonName(answers['primary-first-name']);
+      const spouseName = formatPersonName(answers['spouse-first-name']);
+
+      if (primaryName) {
+        result = result.replace(/adulte 1/gi, primaryName);
+      }
+
+      if (spouseName) {
+        result = result.replace(/adulte 2/gi, spouseName);
+      }
+
+      return result;
+    },
+    [],
+  );
+
+  const getStepPrompt = useCallback(
+    (step: ChatStep, answers: Record<string, string>): string =>
+      replaceAdultPlaceholders(step.prompt, answers),
+    [replaceAdultPlaceholders],
+  );
+
+  const getStepLabel = useCallback(
+    (step: ChatStep, answers: Record<string, string>): string =>
+      replaceAdultPlaceholders(step.label ?? step.prompt, answers),
+    [replaceAdultPlaceholders],
+  );
+
+  const shouldDisplayStep = useCallback((step: ChatStep, answers: Record<string, string>): boolean => {
+    if (step.shouldAsk) {
+      try {
+        return step.shouldAsk(answers);
+      } catch (err) {
+        console.warn('Évaluation conditionnelle impossible pour', step.id, err);
+        return false;
+      }
+    }
+
+    return true;
+  }, []);
 
   const minimumBirthDate = useMemo(() => new Date(1900, 0, 1), []);
   const maximumBirthDate = useMemo(() => new Date(), []);
@@ -860,17 +1184,91 @@ export default function ChatScreen() {
     }
   }, [isBirthDateQuestion]);
 
+  const fetchCitiesForPostalCode = useCallback(
+    async (postalCode: string) => {
+      const sanitized = postalCode.replace(/\s+/g, '');
+
+      if (!/^\d{5}$/.test(sanitized)) {
+        setPostalCodeCities([]);
+        setLastPostalCodeLookup('');
+        return;
+      }
+
+      if (sanitized === lastPostalCodeLookup) {
+        return;
+      }
+
+      setLastPostalCodeLookup(sanitized);
+
+      try {
+        const response = await fetch(
+          `https://geo.api.gouv.fr/communes?codePostal=${sanitized}&fields=nom&format=json&geometry=centre`,
+        );
+
+        if (!response.ok) {
+          throw new Error(`status ${response.status}`);
+        }
+
+        const payload = (await response.json()) as Array<{ nom?: string }>;
+        const cityNames = payload
+          .map((item) => item.nom?.trim())
+          .filter((name): name is string => Boolean(name && name.length))
+          .sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
+
+        setPostalCodeCities(cityNames);
+
+        setChatMessages((current) => [
+          ...current,
+          {
+            id: `bot-postal-${Date.now()}`,
+            role: 'bot',
+            text:
+              cityNames.length > 0
+                ? `Communes correspondantes pour ${sanitized} : ${cityNames.join(', ')}. Sélectionnez la commune correspondante ci-dessous.`
+                : `Aucune commune trouvée pour le code postal ${sanitized}.`,
+          },
+        ]);
+      } catch (postalLookupError) {
+        console.warn('Recherche de communes impossible', postalLookupError);
+        setPostalCodeCities([]);
+        setChatMessages((current) => [
+          ...current,
+          {
+            id: `bot-postal-error-${Date.now()}`,
+            role: 'bot',
+            text:
+              "Impossible de récupérer les communes associées à ce code postal pour le moment. Vous pouvez saisir la commune manuellement.",
+          },
+        ]);
+      }
+    },
+    [lastPostalCodeLookup],
+  );
+
   const appendNextPrompts = useCallback(
-    (baseMessages: ChatMessage[], startIndex: number) => {
+    (
+      baseMessages: ChatMessage[],
+      startIndex: number,
+      answersOverride?: Record<string, string>,
+    ) => {
       const messages = [...baseMessages];
       let index = startIndex;
+      const answers = answersOverride ?? guidedAnswers;
 
       while (index < chatSteps.length) {
         const step = chatSteps[index];
+
+        if (!shouldDisplayStep(step, answers)) {
+          index += 1;
+          continue;
+        }
+
+        const promptText = getStepPrompt(step, answers);
+
         messages.push({
           id: `bot-${step.id}-${index}-${messages.length}`,
           role: 'bot',
-          text: step.prompt,
+          text: promptText,
         });
 
         if (step.type !== 'info') {
@@ -882,11 +1280,13 @@ export default function ChatScreen() {
 
       return { messages, nextIndex: chatSteps.length, finished: true } as const;
     },
-    [chatSteps],
+    [chatSteps, getStepPrompt, guidedAnswers, shouldDisplayStep],
   );
 
   const resetChatAnswers = useCallback(() => {
     setGuidedAnswers({});
+    setPostalCodeCities([]);
+    setLastPostalCodeLookup('');
   }, []);
 
   const startChat = useCallback(() => {
@@ -904,7 +1304,7 @@ export default function ChatScreen() {
       },
     ];
 
-    const { messages, nextIndex, finished } = appendNextPrompts(introMessages, 0);
+    const { messages, nextIndex, finished } = appendNextPrompts(introMessages, 0, {});
 
     setChatMessages(messages);
     setCurrentChatStep(nextIndex);
@@ -1005,12 +1405,16 @@ export default function ChatScreen() {
         return;
       }
 
+      if (!shouldDisplayStep(step, guidedAnswers)) {
+        return;
+      }
+
       const answer = guidedAnswers[step.id];
       if (!answer || !answer.trim().length) {
         return;
       }
 
-      const label = step.label ?? step.prompt;
+      const label = getStepLabel(step, guidedAnswers);
       const lines = sectionLines.get(step.section) ?? [];
       lines.push(`${label}: ${answer.trim()}`);
       sectionLines.set(step.section, lines);
@@ -1019,7 +1423,7 @@ export default function ChatScreen() {
     return Array.from(sectionLines.entries())
       .map(([sectionTitle, lines]) => `${sectionTitle}\n${lines.map((line) => `• ${line}`).join('\n')}`)
       .join('\n\n');
-  }, [chatSteps, guidedAnswers]);
+  }, [chatSteps, getStepLabel, guidedAnswers, shouldDisplayStep]);
 
   const handleApplyGuidedSummary = useCallback(() => {
     if (!guidedSummary.trim().length) {
@@ -1090,14 +1494,17 @@ export default function ChatScreen() {
 
       setChatError(null);
 
-      setGuidedAnswers((current) => ({
-        ...current,
+      const answersWithCurrent = {
+        ...guidedAnswers,
         [step.id]: normalizedAnswer,
-      }));
+      };
+
+      setGuidedAnswers(answersWithCurrent);
 
       const { messages, nextIndex, finished } = appendNextPrompts(
         messagesAfterReply,
         currentChatStep + 1,
+        answersWithCurrent,
       );
 
       const finalMessages: ChatMessage[] = finished
@@ -1116,6 +1523,10 @@ export default function ChatScreen() {
       setCurrentChatStep(nextIndex);
       setChatInput('');
       setIsChatFinished(finished);
+
+      if (step.id === 'housing-postal-code') {
+        void fetchCitiesForPostalCode(normalizedAnswer);
+      }
     },
     [
       appendNextPrompts,
@@ -1124,7 +1535,9 @@ export default function ChatScreen() {
       chatSteps,
       currentChatStep,
       formatBirthDate,
+      guidedAnswers,
       isChatFinished,
+      fetchCitiesForPostalCode,
       maximumBirthDate,
       minimumBirthDate,
       parseBirthDateInput,
@@ -1375,9 +1788,9 @@ export default function ChatScreen() {
                     ))}
                   </ScrollView>
 
-                  {activeChatStep?.options && activeChatStep.options.length > 0 && (
+                  {activeChatOptions.length > 0 && (
                     <View style={styles.chatOptionsContainer}>
-                      {activeChatStep.options.map((option) => {
+                      {activeChatOptions.map((option) => {
                         const isSelected = chatInput.trim() === option;
                         return (
                           <TouchableOpacity

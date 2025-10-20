@@ -21,7 +21,12 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Bot, History as HistoryIcon, Sparkles } from 'lucide-react-native';
 import Constants from 'expo-constants';
 
-import { CHAT_PLAN_STEPS, type ChatStep } from '@/lib/chat-plan';
+import {
+  CHAT_PLAN_STEPS,
+  MULTI_SELECT_SEPARATOR,
+  type ChatMultiSelectOption,
+  type ChatStep,
+} from '@/lib/chat-plan';
 import { buildSimulationPayload, extractRawJson } from '@/lib/simulation';
 import type { ApiSimulationResponse } from '@/lib/simulation';
 import {
@@ -96,6 +101,7 @@ export default function ChatScreen() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [currentChatStep, setCurrentChatStep] = useState(0);
   const [chatInput, setChatInput] = useState('');
+  const [multiSelectSelections, setMultiSelectSelections] = useState<string[]>([]);
   const [chatError, setChatError] = useState<string | null>(null);
   const [isChatFinished, setIsChatFinished] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -110,12 +116,78 @@ export default function ChatScreen() {
       return [] as string[];
     }
 
+    if (activeChatStep.multiSelectOptions?.length) {
+      return [] as string[];
+    }
+
     if (activeChatStep.id === 'housing-city' && postalCodeCities.length > 0) {
       return postalCodeCities;
     }
 
     return activeChatStep.options ?? [];
   }, [activeChatStep, postalCodeCities]);
+
+  const activeMultiSelectOptions = useMemo<ChatMultiSelectOption[]>(
+    () => activeChatStep?.multiSelectOptions ?? [],
+    [activeChatStep],
+  );
+
+  const parseMultiSelectAnswer = useCallback((value?: string): string[] => {
+    if (!value) {
+      return [];
+    }
+
+    return value
+      .split(';')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }, []);
+
+  const groupedMultiSelectOptions = useMemo(
+    () =>
+      activeMultiSelectOptions.reduce(
+        (groups, option) => {
+          const groupLabel = option.group ?? 'Autres';
+          const existingGroup = groups.find((group) => group.label === groupLabel);
+
+          if (existingGroup) {
+            existingGroup.options.push(option);
+          } else {
+            groups.push({ label: groupLabel, options: [option] });
+          }
+
+          return groups;
+        },
+        [] as { label: string; options: ChatMultiSelectOption[] }[],
+      ),
+    [activeMultiSelectOptions],
+  );
+
+  useEffect(() => {
+    if (!activeChatStep?.multiSelectOptions?.length) {
+      setMultiSelectSelections([]);
+      return;
+    }
+
+    const existingAnswer = guidedAnswers[activeChatStep.id];
+    setMultiSelectSelections(parseMultiSelectAnswer(existingAnswer));
+  }, [activeChatStep, guidedAnswers, parseMultiSelectAnswer]);
+
+  const toggleMultiSelectOption = useCallback(
+    (label: string) => {
+      const normalizedLabel = label.trim();
+      setMultiSelectSelections((current) => {
+        if (current.includes(normalizedLabel)) {
+          return current.filter((value) => value !== normalizedLabel);
+        }
+
+        const orderedLabels = activeMultiSelectOptions.map((option) => option.label.trim());
+        const updated = [...current, normalizedLabel];
+        return updated.sort((a, b) => orderedLabels.indexOf(a) - orderedLabels.indexOf(b));
+      });
+    },
+    [activeMultiSelectOptions],
+  );
 
   const replaceAdultPlaceholders = useCallback(
     (text: string, answers: Record<string, string>): string => {
@@ -651,6 +723,30 @@ export default function ChatScreen() {
     ],
   );
 
+  const handleMultiSelectSubmit = useCallback(() => {
+    if (isChatFinished) {
+      return;
+    }
+
+    if (!activeMultiSelectOptions.length) {
+      return;
+    }
+
+    if (!multiSelectSelections.length) {
+      setChatError('Veuillez sélectionner au moins une option.');
+      return;
+    }
+
+    const formattedAnswer = multiSelectSelections.join(MULTI_SELECT_SEPARATOR);
+    handleChatSubmit(formattedAnswer);
+    setMultiSelectSelections([]);
+  }, [
+    activeMultiSelectOptions,
+    handleChatSubmit,
+    isChatFinished,
+    multiSelectSelections,
+  ]);
+
   const handleOptionSelect = useCallback(
     (option: string) => {
       if (isChatFinished) {
@@ -894,6 +990,63 @@ export default function ChatScreen() {
                       </View>
                     ))}
                   </ScrollView>
+
+                  {activeMultiSelectOptions.length > 0 && (
+                    <View style={styles.multiSelectContainer}>
+                      {activeChatStep?.multiSelectHint ? (
+                        <Text style={styles.multiSelectHintText}>{activeChatStep.multiSelectHint}</Text>
+                      ) : null}
+                      {groupedMultiSelectOptions.map((group) => (
+                        <View key={group.label} style={styles.multiSelectGroup}>
+                          {group.label.trim().length > 0 && (
+                            <Text style={styles.multiSelectGroupLabel}>{group.label}</Text>
+                          )}
+                          {group.options.map((option) => {
+                            const isSelected = multiSelectSelections.includes(option.label);
+                            return (
+                              <TouchableOpacity
+                                key={option.label}
+                                style={[
+                                  styles.multiSelectOption,
+                                  isSelected && styles.multiSelectOptionSelected,
+                                  isChatFinished && styles.multiSelectOptionDisabled,
+                                ]}
+                                onPress={() => toggleMultiSelectOption(option.label)}
+                                disabled={isChatFinished}>
+                                <Text
+                                  style={[
+                                    styles.multiSelectOptionText,
+                                    isSelected && styles.multiSelectOptionTextSelected,
+                                  ]}>
+                                  {option.label}
+                                </Text>
+                                {option.description ? (
+                                  <Text style={styles.multiSelectOptionDescription}>{option.description}</Text>
+                                ) : null}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      ))}
+                      <TouchableOpacity
+                        style={[
+                          styles.multiSelectSubmitButton,
+                          (isChatFinished || multiSelectSelections.length === 0) &&
+                            styles.multiSelectSubmitButtonDisabled,
+                        ]}
+                        onPress={handleMultiSelectSubmit}
+                        disabled={isChatFinished || multiSelectSelections.length === 0}>
+                        <Text
+                          style={[
+                            styles.multiSelectSubmitButtonText,
+                            (isChatFinished || multiSelectSelections.length === 0) &&
+                              styles.multiSelectSubmitButtonTextDisabled,
+                          ]}>
+                          Valider la sélection
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
                   {activeChatOptions.length > 0 && (
                     <View style={styles.chatOptionsContainer}>
@@ -1229,6 +1382,75 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 12,
+  },
+  multiSelectContainer: {
+    marginBottom: 12,
+    backgroundColor: '#e8f4fb',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#d0e4f1',
+  },
+  multiSelectHintText: {
+    fontSize: 13,
+    color: '#2d6a7a',
+    marginBottom: 8,
+  },
+  multiSelectGroup: {
+    marginBottom: 12,
+  },
+  multiSelectGroupLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2d6a7a',
+    marginBottom: 6,
+  },
+  multiSelectOption: {
+    borderWidth: 1,
+    borderColor: '#4ba3c3',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  multiSelectOptionSelected: {
+    backgroundColor: '#4ba3c3',
+    borderColor: '#4ba3c3',
+  },
+  multiSelectOptionDisabled: {
+    opacity: 0.6,
+  },
+  multiSelectOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2d6a7a',
+  },
+  multiSelectOptionTextSelected: {
+    color: '#fff',
+  },
+  multiSelectOptionDescription: {
+    fontSize: 12,
+    color: '#2d6a7a',
+    marginTop: 4,
+  },
+  multiSelectSubmitButton: {
+    marginTop: 4,
+    backgroundColor: '#4ba3c3',
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  multiSelectSubmitButtonDisabled: {
+    backgroundColor: '#aacfe0',
+  },
+  multiSelectSubmitButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  multiSelectSubmitButtonTextDisabled: {
+    color: '#e6f4f9',
   },
   chatOptionButton: {
     paddingVertical: 8,

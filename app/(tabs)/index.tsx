@@ -102,6 +102,22 @@ const receivesAdult1Unemployment = (answers: Record<string, string>): boolean =>
 const receivesAdult2Unemployment = (answers: Record<string, string>): boolean =>
   toComparable(answers['adult2-unemployment-benefits']).startsWith('oui');
 
+const receivesAdult1PrimeActivity = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult1-prime-activity']);
+
+const receivesAdult1Rsa = (answers: Record<string, string>): boolean => isYes(answers['adult1-rsa']);
+
+const receivesAdult1HousingBenefits = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult1-housing-benefits']);
+
+const receivesAdult1FamilyAllowances = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult1-family-allowances']);
+
+const receivesAdult1Aah = (answers: Record<string, string>): boolean => isYes(answers['adult1-aah']);
+
+const receivesAdult1InvalidityPension = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult1-invalidity-pension']);
+
 const isAdult1Independent = (answers: Record<string, string>): boolean =>
   toComparable(answers['adult1-situation']) === 'travailleur independant / auto-entrepreneur';
 
@@ -912,11 +928,88 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt: '7-8. Percevez-vous une allocation chômage (ARE) ? Si oui, indiquez le montant mensuel net.',
   },
   {
-    id: 'social-benefits-info',
+    id: 'adult1-prime-activity',
     section: 'Section 4 – Ressources et revenus',
-    label: 'Prestations sociales adulte 1',
-    prompt:
-      '9-14. Détaillez les prestations sociales perçues (prime d’activité, RSA, aides logement, allocations familiales, AAH, pension d’invalidité) avec les montants mensuels, ou indiquez « Aucune ».',
+    label: 'Prime d’activité adulte 1',
+    prompt: '9. Percevez-vous la prime d’activité ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+  },
+  {
+    id: 'adult1-prime-activity-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant prime d’activité adulte 1',
+    prompt: 'Indiquez le montant mensuel net perçu pour la prime d’activité.',
+    shouldAsk: receivesAdult1PrimeActivity,
+  },
+  {
+    id: 'adult1-rsa',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'RSA adulte 1',
+    prompt: '10. Percevez-vous le Revenu de solidarité active (RSA) ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+  },
+  {
+    id: 'adult1-rsa-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant RSA adulte 1',
+    prompt: 'Indiquez le montant mensuel net perçu pour le RSA.',
+    shouldAsk: receivesAdult1Rsa,
+  },
+  {
+    id: 'adult1-housing-benefits',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Aides au logement adulte 1',
+    prompt: '11. Percevez-vous une aide au logement ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+  },
+  {
+    id: 'adult1-housing-benefits-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant aide au logement adulte 1',
+    prompt: 'Indiquez le montant mensuel net perçu pour l’aide au logement.',
+    shouldAsk: receivesAdult1HousingBenefits,
+  },
+  {
+    id: 'adult1-family-allowances',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Allocations familiales adulte 1',
+    prompt: '12. Percevez-vous des allocations familiales ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+  },
+  {
+    id: 'adult1-family-allowances-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant allocations familiales adulte 1',
+    prompt: 'Indiquez le montant mensuel net perçu pour les allocations familiales.',
+    shouldAsk: receivesAdult1FamilyAllowances,
+  },
+  {
+    id: 'adult1-aah',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'AAH adulte 1',
+    prompt: '13. Percevez-vous l’Allocation aux adultes handicapés (AAH) ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+  },
+  {
+    id: 'adult1-aah-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant AAH adulte 1',
+    prompt: 'Indiquez le montant mensuel net perçu pour l’AAH.',
+    shouldAsk: receivesAdult1Aah,
+  },
+  {
+    id: 'adult1-invalidity-pension',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Pension d’invalidité adulte 1',
+    prompt: '14. Percevez-vous une pension d’invalidité ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+  },
+  {
+    id: 'adult1-invalidity-pension-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant pension d’invalidité adulte 1',
+    prompt: 'Indiquez le montant mensuel net perçu pour la pension d’invalidité.',
+    shouldAsk: receivesAdult1InvalidityPension,
   },
   {
     id: 'pensions-info',

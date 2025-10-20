@@ -189,6 +189,7 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     label: 'Garde alternée',
     prompt:
       '14. La garde est-elle alternée (Oui/Non) pour chacun des enfants ou personnes à charge ?',
+    options: ['Oui', 'Non'],
   },
   {
     id: 'dependents-additional-info',

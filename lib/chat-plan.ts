@@ -497,15 +497,25 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
       'Non',
       'Non applicable',
     ],
+    shouldAsk: isAdult1DisabilitySituation,
   },
   {
     id: 'adult1-disability-rate',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Taux de handicap (adulte 1)',
     prompt:
-      '23 bis. Quel est le taux de handicap reconnu pour votre RQTH ? (Moins de 50 %, 50 % à 79 %, 80 % et plus).',
-    options: ['Moins de 50 %', '50 % à 79 %', '80 % et plus', 'Non communiqué'],
+      '23 bis. Quel est le taux de handicap reconnu pour votre RQTH ? (Moins de 50 %, Entre 50 % et 80 %, Plus de 80 %).',
+    options: ['Moins de 50 %', 'Entre 50 % et 80 %', 'Plus de 80 %'],
     shouldAsk: isAdult1Rqth,
+  },
+  {
+    id: 'adult1-disability-restriction',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Restriction substantielle (adulte 1)',
+    prompt:
+      'Disposez-vous d’une restriction substantielle et durable d’accès à l’emploi reconnue par la CDAPH ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: isAdult1DisabilitySituation,
   },
   {
     id: 'adult1-disability-aah',
@@ -692,16 +702,25 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
       'Non',
       'Non applicable',
     ],
-    shouldAsk: wantsAdult2Details,
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2DisabilitySituation(answers),
   },
   {
     id: 'adult2-disability-rate',
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Taux de handicap (adulte 2)',
     prompt:
-      '42 bis. Quel est le taux de handicap reconnu pour la RQTH de votre conjoint(e) ? (Moins de 50 %, 50 % à 79 %, 80 % et plus).',
-    options: ['Moins de 50 %', '50 % à 79 %', '80 % et plus', 'Non communiqué'],
+      '42 bis. Quel est le taux de handicap reconnu pour la RQTH de votre conjoint(e) ? (Moins de 50 %, Entre 50 % et 80 %, Plus de 80 %).',
+    options: ['Moins de 50 %', 'Entre 50 % et 80 %', 'Plus de 80 %'],
     shouldAsk: wantsAdult2RqthDetails,
+  },
+  {
+    id: 'adult2-disability-restriction',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Restriction substantielle (adulte 2)',
+    prompt:
+      'Votre conjoint(e) dispose-t-il(elle) d’une restriction substantielle et durable d’accès à l’emploi reconnue par la CDAPH ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2DisabilitySituation(answers),
   },
   {
     id: 'adult2-disability-aah',

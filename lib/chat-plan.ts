@@ -35,6 +35,24 @@ export const includesMultiSelectValue = (value: string | undefined, expected: st
   return splitMultiSelectValues(value).some((entry) => toComparable(entry) === normalizedExpected);
 };
 
+const joinMultiSelectAnswers = (
+  answers: Record<string, string>,
+  keys: string[],
+): string | undefined => {
+  const values = keys
+    .map((key) => answers[key])
+    .filter((value) => value && value.length > 0);
+
+  if (values.length === 0) {
+    return undefined;
+  }
+
+  return values.join(MULTI_SELECT_SEPARATOR);
+};
+
+const getAdult1SituationsAnswer = (answers: Record<string, string>): string | undefined =>
+  joinMultiSelectAnswers(answers, ['adult1-situation-activite', 'adult1-situation-accompagnement']);
+
 export const toComparable = (value?: string): string =>
   (value ?? '')
     .trim()
@@ -55,19 +73,22 @@ export const wantsAdult2Details = (answers: Record<string, string>): boolean =>
 export const hasDependents = (answers: Record<string, string>): boolean => isYes(answers['dependents-any']);
 
 export const isAdult1Independent = (answers: Record<string, string>): boolean =>
-  includesMultiSelectValue(answers['adult1-situation'], 'Travailleur indépendant / auto-entrepreneur');
+  includesMultiSelectValue(
+    getAdult1SituationsAnswer(answers),
+    'Travailleur indépendant / auto-entrepreneur',
+  );
 
 export const isAdult2Independent = (answers: Record<string, string>): boolean =>
   includesMultiSelectValue(answers['adult2-situation'], 'Travailleur indépendant / auto-entrepreneur');
 
 export const isAdult1DisabilitySituation = (answers: Record<string, string>): boolean =>
-  includesMultiSelectValue(answers['adult1-situation'], 'En situation de handicap');
+  includesMultiSelectValue(getAdult1SituationsAnswer(answers), 'En situation de handicap');
 
 export const isAdult2DisabilitySituation = (answers: Record<string, string>): boolean =>
   includesMultiSelectValue(answers['adult2-situation'], 'En situation de handicap');
 
 export const isAdult1Rqth = (answers: Record<string, string>): boolean =>
-  includesMultiSelectValue(answers['adult1-situation'], 'En situation de handicap') ||
+  includesMultiSelectValue(getAdult1SituationsAnswer(answers), 'En situation de handicap') ||
   toComparable(answers['adult1-disability-recognition']).includes('rqth');
 
 export const isAdult2Rqth = (answers: Record<string, string>): boolean =>
@@ -78,13 +99,13 @@ export const wantsAdult2RqthDetails = (answers: Record<string, string>): boolean
   wantsAdult2Details(answers) && isAdult2Rqth(answers);
 
 export const isAdult1Employee = (answers: Record<string, string>): boolean =>
-  includesMultiSelectValue(answers['adult1-situation'], 'Salarié(e)');
+  includesMultiSelectValue(getAdult1SituationsAnswer(answers), 'Salarié(e)');
 
 export const isAdult2Employee = (answers: Record<string, string>): boolean =>
   includesMultiSelectValue(answers['adult2-situation'], 'Salarié(e)');
 
 const hasAdult1Situation = (answers: Record<string, string>, label: string): boolean =>
-  includesMultiSelectValue(answers['adult1-situation'], label);
+  includesMultiSelectValue(getAdult1SituationsAnswer(answers), label);
 
 const hasAdult2Situation = (answers: Record<string, string>, label: string): boolean =>
   includesMultiSelectValue(answers['adult2-situation'], label);
@@ -370,11 +391,11 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt: '🔶 SECTION 2 – SITUATION PROFESSIONNELLE ET PERSONNELLE',
   },
   {
-    id: 'adult1-situation',
+    id: 'adult1-situation-activite',
     section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Situation actuelle (adulte 1)',
+    label: 'Situations professionnelles (adulte 1)',
     prompt:
-      '16. Pour vous (adulte 1), quelles situations s’appliquent actuellement ? Vous pouvez sélectionner plusieurs cas.',
+      '16. Pour vous (adulte 1), quelles situations professionnelles s’appliquent actuellement ? Vous pouvez sélectionner plusieurs cas.',
     multiSelectHint: 'Sélectionnez toutes les situations qui correspondent à votre parcours.',
     multiSelectOptions: [
       { label: 'Salarié(e)', group: 'Activité professionnelle' },
@@ -384,8 +405,6 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
       },
       { label: 'En reprise d’activité', group: 'Activité professionnelle' },
       { label: 'En congé parental', group: 'Situation familiale' },
-      { label: 'Demandeur d’emploi', group: 'Accompagnement vers l’emploi' },
-      { label: 'En CER ou en PPAE', group: 'Accompagnement vers l’emploi' },
       {
         label: 'Journaliste, assistant maternel ou familial',
         group: 'Professions spécifiques',
@@ -397,6 +416,19 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
       { label: 'Régime Alsace Moselle', group: 'Régimes particuliers' },
       { label: 'Sans activité / au foyer', group: 'Autres situations' },
       { label: 'Retraité(e)', group: 'Autres situations' },
+    ],
+  },
+  {
+    id: 'adult1-situation-accompagnement',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Accompagnement vers l’emploi (adulte 1)',
+    prompt:
+      '16 bis. Bénéficiez-vous d’un accompagnement vers l’emploi ? Vous pouvez sélectionner plusieurs cas.',
+    multiSelectHint: 'Sélectionnez toutes les situations qui correspondent à votre parcours.',
+    multiSelectOptions: [
+      { label: 'Demandeur d’emploi', group: 'Accompagnement vers l’emploi' },
+      { label: 'En CER ou en PPAE', group: 'Accompagnement vers l’emploi' },
+      { label: 'Aucun accompagnement', group: 'Accompagnement vers l’emploi' },
     ],
   },
   {

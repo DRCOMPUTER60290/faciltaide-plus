@@ -108,6 +108,15 @@ const isAdult1Independent = (answers: Record<string, string>): boolean =>
 const isAdult2Independent = (answers: Record<string, string>): boolean =>
   toComparable(answers['adult2-situation']) === 'travailleur independant / auto-entrepreneur';
 
+const isAdult1Rqth = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult1-disability-recognition']).includes('rqth');
+
+const isAdult2Rqth = (answers: Record<string, string>): boolean =>
+  toComparable(answers['adult2-disability-recognition']).includes('rqth');
+
+const wantsAdult2RqthDetails = (answers: Record<string, string>): boolean =>
+  wantsAdult2Details(answers) && isAdult2Rqth(answers);
+
 const isAdult1Employee = (answers: Record<string, string>): boolean =>
   toComparable(answers['adult1-situation']) === 'salariee';
 
@@ -411,15 +420,32 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Reconnaissance handicap (adulte 1)',
     prompt:
-      '23. Disposez-vous d’une reconnaissance de handicap ? (RQTH, AAH, Autre, Non).',
+      '23. Disposez-vous d’une reconnaissance de handicap ? (RQTH, Autre reconnaissance, Demande en cours, Non).',
     options: [
       'Oui, RQTH',
-      'Oui, AAH',
       'Oui, autre reconnaissance',
       'Demande en cours',
       'Non',
       'Non applicable',
     ],
+  },
+  {
+    id: 'adult1-disability-rate',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Taux de handicap (adulte 1)',
+    prompt:
+      '23 bis. Quel est le taux de handicap reconnu pour votre RQTH ? (Moins de 50 %, 50 % à 79 %, 80 % et plus).',
+    options: ['Moins de 50 %', '50 % à 79 %', '80 % et plus', 'Non communiqué'],
+    shouldAsk: isAdult1Rqth,
+  },
+  {
+    id: 'adult1-disability-aah',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Perception de l’AAH (adulte 1)',
+    prompt:
+      '23 ter. Percevez-vous l’Allocation aux adultes handicapés (AAH) ? (Oui, En cours d’instruction, Non).',
+    options: ['Oui', 'En cours d’instruction', 'Non', 'Non applicable'],
+    shouldAsk: isAdult1Rqth,
   },
   {
     id: 'adult1-social-aids',
@@ -574,16 +600,33 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Reconnaissance handicap (adulte 2)',
     prompt:
-      '42. Votre conjoint(e) dispose-t-il(elle) d’une reconnaissance de handicap ? (RQTH, AAH, Autre, Non).',
+      '42. Votre conjoint(e) dispose-t-il(elle) d’une reconnaissance de handicap ? (RQTH, Autre reconnaissance, Demande en cours, Non).',
     options: [
       'Oui, RQTH',
-      'Oui, AAH',
       'Oui, autre reconnaissance',
       'Demande en cours',
       'Non',
       'Non applicable',
     ],
     shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-disability-rate',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Taux de handicap (adulte 2)',
+    prompt:
+      '42 bis. Quel est le taux de handicap reconnu pour la RQTH de votre conjoint(e) ? (Moins de 50 %, 50 % à 79 %, 80 % et plus).',
+    options: ['Moins de 50 %', '50 % à 79 %', '80 % et plus', 'Non communiqué'],
+    shouldAsk: wantsAdult2RqthDetails,
+  },
+  {
+    id: 'adult2-disability-aah',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Perception de l’AAH (adulte 2)',
+    prompt:
+      '42 ter. Votre conjoint(e) perçoit-il(elle) l’Allocation aux adultes handicapés (AAH) ? (Oui, En cours d’instruction, Non).',
+    options: ['Oui', 'En cours d’instruction', 'Non', 'Non applicable'],
+    shouldAsk: wantsAdult2RqthDetails,
   },
   {
     id: 'adult2-social-aids',

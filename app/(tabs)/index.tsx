@@ -118,6 +118,22 @@ const receivesAdult1Aah = (answers: Record<string, string>): boolean => isYes(an
 const receivesAdult1InvalidityPension = (answers: Record<string, string>): boolean =>
   isYes(answers['adult1-invalidity-pension']);
 
+const receivesAdult2PrimeActivity = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult2-prime-activity']);
+
+const receivesAdult2Rsa = (answers: Record<string, string>): boolean => isYes(answers['adult2-rsa']);
+
+const receivesAdult2HousingBenefits = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult2-housing-benefits']);
+
+const receivesAdult2FamilyAllowances = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult2-family-allowances']);
+
+const receivesAdult2Aah = (answers: Record<string, string>): boolean => isYes(answers['adult2-aah']);
+
+const receivesAdult2InvalidityPension = (answers: Record<string, string>): boolean =>
+  isYes(answers['adult2-invalidity-pension']);
+
 const isAdult1Independent = (answers: Record<string, string>): boolean =>
   toComparable(answers['adult1-situation']) === 'travailleur independant / auto-entrepreneur';
 
@@ -1026,11 +1042,134 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       '18-22. Avez-vous des revenus de capitaux mobiliers, des revenus locatifs, des revenus exceptionnels, une aide financière régulière d’un proche ou des activités non déclarées générant un revenu ? Précisez les montants ou indiquez « Non ».',
   },
   {
-    id: 'partner-resources-info',
+    id: 'adult2-salary-info',
     section: 'Section 4 – Ressources et revenus',
-    label: 'Revenus du conjoint',
+    label: 'Salaires adulte 2',
     prompt:
-      'Répétez les informations précédentes pour votre conjoint(e) si vous êtes en couple (salaires, indépendants, chômage, prestations, pensions, autres ressources). Indiquez « Non applicable » si vous vivez seul(e).',
+      '1-3 bis. Concernant votre conjoint(e), a-t-il(elle) perçu un salaire au cours des 12 derniers mois ? Si oui, indiquez le montant net mensuel moyen (3 derniers mois) ainsi que primes/heures supplémentaires/indemnités. Indiquez « Non » si aucun salaire.',
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-independent-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Revenus indépendants adulte 2',
+    prompt:
+      '4-6 bis. Votre conjoint(e) a-t-il(elle) des revenus d’activité indépendante ? Si oui, indiquez le chiffre d’affaires mensuel moyen et le revenu net estimé (après charges).',
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-unemployment-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Allocation chômage adulte 2',
+    prompt:
+      '7-8 bis. Votre conjoint(e) perçoit-il(elle) une allocation chômage (ARE) ? Si oui, indiquez le montant mensuel net.',
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-prime-activity',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Prime d’activité adulte 2',
+    prompt: '9 bis. Votre conjoint(e) perçoit-il(elle) la prime d’activité ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-prime-activity-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant prime d’activité adulte 2',
+    prompt: 'Indiquez le montant mensuel net perçu par votre conjoint(e) pour la prime d’activité.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2PrimeActivity(answers),
+  },
+  {
+    id: 'adult2-rsa',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'RSA adulte 2',
+    prompt: '10 bis. Votre conjoint(e) perçoit-il(elle) le Revenu de solidarité active (RSA) ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-rsa-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant RSA adulte 2',
+    prompt: 'Indiquez le montant mensuel net perçu par votre conjoint(e) pour le RSA.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2Rsa(answers),
+  },
+  {
+    id: 'adult2-housing-benefits',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Aides au logement adulte 2',
+    prompt: '11 bis. Votre conjoint(e) perçoit-il(elle) une aide au logement ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-housing-benefits-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant aide au logement adulte 2',
+    prompt: 'Indiquez le montant mensuel net perçu par votre conjoint(e) pour l’aide au logement.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2HousingBenefits(answers),
+  },
+  {
+    id: 'adult2-family-allowances',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Allocations familiales adulte 2',
+    prompt: '12 bis. Votre conjoint(e) perçoit-il(elle) des allocations familiales ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-family-allowances-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant allocations familiales adulte 2',
+    prompt: 'Indiquez le montant mensuel net perçu par votre conjoint(e) pour les allocations familiales.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2FamilyAllowances(answers),
+  },
+  {
+    id: 'adult2-aah',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'AAH adulte 2',
+    prompt: '13 bis. Votre conjoint(e) perçoit-il(elle) l’Allocation aux adultes handicapés (AAH) ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-aah-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant AAH adulte 2',
+    prompt: 'Indiquez le montant mensuel net perçu par votre conjoint(e) pour l’AAH.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2Aah(answers),
+  },
+  {
+    id: 'adult2-invalidity-pension',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Pension d’invalidité adulte 2',
+    prompt: '14 bis. Votre conjoint(e) perçoit-il(elle) une pension d’invalidité ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-invalidity-pension-amount',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Montant pension d’invalidité adulte 2',
+    prompt: 'Indiquez le montant mensuel net perçu par votre conjoint(e) pour la pension d’invalidité.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && receivesAdult2InvalidityPension(answers),
+  },
+  {
+    id: 'adult2-pensions-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Pensions et rentes adulte 2',
+    prompt:
+      '15-17 bis. Votre conjoint(e) perçoit-il(elle) une pension alimentaire, une pension de retraite ou une rente/indemnité d’assurance ? Précisez les montants mensuels ou indiquez « Non ».',
+    shouldAsk: wantsAdult2Details,
+  },
+  {
+    id: 'adult2-other-resources-info',
+    section: 'Section 4 – Ressources et revenus',
+    label: 'Autres ressources adulte 2',
+    prompt:
+      '18-22 bis. Votre conjoint(e) dispose-t-il(elle) de revenus de capitaux mobiliers, de revenus locatifs, de revenus exceptionnels, d’une aide financière régulière d’un proche ou d’activités non déclarées générant un revenu ? Précisez les montants ou indiquez « Non ».',
+    shouldAsk: wantsAdult2Details,
   },
   {
     id: 'children-income-info',

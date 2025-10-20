@@ -35,9 +35,6 @@ export const includesMultiSelectValue = (value: string | undefined, expected: st
   return splitMultiSelectValues(value).some((entry) => toComparable(entry) === normalizedExpected);
 };
 
-const answerEquals = (value: string | undefined, expected: string): boolean =>
-  toComparable(value) === toComparable(expected);
-
 export const toComparable = (value?: string): string =>
   (value ?? '')
     .trim()
@@ -103,24 +100,6 @@ export const isAdult1Student = (answers: Record<string, string>): boolean =>
 
 export const isAdult2Student = (answers: Record<string, string>): boolean =>
   hasAdult2Situation(answers, 'Étudiant(e)');
-
-export const isAdult1ReturnToWork = (answers: Record<string, string>): boolean =>
-  hasAdult1Situation(answers, 'En reprise d’activité');
-
-export const isAdult2ReturnToWork = (answers: Record<string, string>): boolean =>
-  hasAdult2Situation(answers, 'En reprise d’activité');
-
-export const isAdult1DisabilitySituation = (answers: Record<string, string>): boolean =>
-  hasAdult1Situation(answers, 'En situation de handicap');
-
-export const isAdult2DisabilitySituation = (answers: Record<string, string>): boolean =>
-  hasAdult2Situation(answers, 'En situation de handicap');
-
-const isAdult1ReturnToWorkCdd = (answers: Record<string, string>): boolean =>
-  isAdult1ReturnToWork(answers) && answerEquals(answers['adult1-return-activity-type'], 'CDD');
-
-const isAdult2ReturnToWorkCdd = (answers: Record<string, string>): boolean =>
-  isAdult2ReturnToWork(answers) && answerEquals(answers['adult2-return-activity-type'], 'CDD');
 
 const hasAdult1IncomeSelection = (answers: Record<string, string>, label: string): boolean =>
   includesMultiSelectValue(answers['adult1-income-types'], label);
@@ -419,24 +398,7 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Précisions demandeur d’emploi (adulte 1)',
     prompt:
-      'Indiquez la date de fin de votre dernier contrat de travail (JJ/MM/AAAA). Si vous n’avez jamais eu de contrat, laissez ce champ vide.',
-    shouldAsk: isAdult1JobSeeker,
-  },
-  {
-    id: 'adult1-jobseeker-five-years',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Expérience professionnelle récente (adulte 1)',
-    prompt:
-      'Avez-vous travaillé au moins 5 ans entre décembre 2013 et décembre 2023 ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: isAdult1JobSeeker,
-  },
-  {
-    id: 'adult1-unemployment-benefit-start-date',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Début d’indemnisation chômage (adulte 1)',
-    prompt:
-      'Si vous percevez une indemnisation chômage, précisez la date de début (JJ/MM/AAAA). Laissez vide si vous n’êtes pas indemnisé(e).',
+      'Indiquez la date de fin de votre dernier contrat de travail et, si applicable, la date de début de votre indemnisation chômage. Laissez vide si non concerné.',
     shouldAsk: isAdult1JobSeeker,
   },
   {
@@ -454,31 +416,6 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt: 'En tant qu’étudiant(e), êtes-vous boursier(ère) ? (Oui / Non)',
     options: ['Oui', 'Non'],
     shouldAsk: isAdult1Student,
-  },
-  {
-    id: 'adult1-return-activity-type',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Modalités de reprise (adulte 1)',
-    prompt: 'Vous reprenez votre activité en :',
-    options: ['Formation', 'CDD', 'CDI', 'Création ou reprise d’entreprise'],
-    shouldAsk: isAdult1ReturnToWork,
-  },
-  {
-    id: 'adult1-return-cdd-duration',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Durée du CDD (adulte 1)',
-    prompt:
-      'Indiquez la durée de votre CDD en mois. Laissez vide si cela ne s’applique pas.',
-    shouldAsk: isAdult1ReturnToWorkCdd,
-  },
-  {
-    id: 'adult1-return-working-time',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Temps de travail à la reprise (adulte 1)',
-    prompt:
-      'Quel sera votre temps de travail lors de la reprise ? (Temps plein, Temps partiel d’au moins 15h par semaine).',
-    options: ['Temps plein', 'Temps partiel d’au moins 15h par semaine'],
-    shouldAsk: isAdult1ReturnToWork,
   },
   {
     id: 'adult1-contract-type',
@@ -666,24 +603,7 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Précisions demandeur d’emploi (adulte 2)',
     prompt:
-      'Pour votre conjoint(e), indiquez la date de fin de son dernier contrat de travail (JJ/MM/AAAA). Laissez vide si non concerné.',
-    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JobSeeker(answers),
-  },
-  {
-    id: 'adult2-jobseeker-five-years',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Expérience professionnelle récente (adulte 2)',
-    prompt:
-      'Votre conjoint(e) a-t-il(elle) travaillé au moins 5 ans entre décembre 2013 et décembre 2023 ? (Oui / Non)',
-    options: ['Oui', 'Non'],
-    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JobSeeker(answers),
-  },
-  {
-    id: 'adult2-unemployment-benefit-start-date',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Début d’indemnisation chômage (adulte 2)',
-    prompt:
-      'Si votre conjoint(e) perçoit une indemnisation chômage, précisez la date de début (JJ/MM/AAAA). Laissez vide si non concerné.',
+      'Pour votre conjoint(e), précisez la date de fin du dernier contrat de travail et, si applicable, la date de début de son indemnisation chômage. Laissez vide si non concerné.',
     shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JobSeeker(answers),
   },
   {
@@ -693,31 +613,6 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     prompt: 'Votre conjoint(e) exerce-t-il(elle) comme journaliste, assistant maternel ou assistant familial ?',
     options: ['Journaliste', 'Assistant maternel', 'Assistant familial'],
     shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JournalistGroup(answers),
-  },
-  {
-    id: 'adult2-return-activity-type',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Modalités de reprise (adulte 2)',
-    prompt: 'Votre conjoint(e) reprend son activité en :',
-    options: ['Formation', 'CDD', 'CDI', 'Création ou reprise d’entreprise'],
-    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2ReturnToWork(answers),
-  },
-  {
-    id: 'adult2-return-cdd-duration',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Durée du CDD (adulte 2)',
-    prompt:
-      'Précisez la durée du CDD de votre conjoint(e) en mois. Laissez vide si non applicable.',
-    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2ReturnToWorkCdd(answers),
-  },
-  {
-    id: 'adult2-return-working-time',
-    section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Temps de travail à la reprise (adulte 2)',
-    prompt:
-      'Quel sera le temps de travail de votre conjoint(e) lors de la reprise ? (Temps plein, Temps partiel d’au moins 15h par semaine).',
-    options: ['Temps plein', 'Temps partiel d’au moins 15h par semaine'],
-    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2ReturnToWork(answers),
   },
   {
     id: 'adult2-student-scholarship',

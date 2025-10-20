@@ -60,6 +60,12 @@ export const isAdult1Independent = (answers: Record<string, string>): boolean =>
 export const isAdult2Independent = (answers: Record<string, string>): boolean =>
   includesMultiSelectValue(answers['adult2-situation'], 'Travailleur indépendant / auto-entrepreneur');
 
+export const isAdult1DisabilitySituation = (answers: Record<string, string>): boolean =>
+  includesMultiSelectValue(answers['adult1-situation'], 'En situation de handicap');
+
+export const isAdult2DisabilitySituation = (answers: Record<string, string>): boolean =>
+  includesMultiSelectValue(answers['adult2-situation'], 'En situation de handicap');
+
 export const isAdult1Rqth = (answers: Record<string, string>): boolean =>
   includesMultiSelectValue(answers['adult1-situation'], 'En situation de handicap') ||
   toComparable(answers['adult1-disability-recognition']).includes('rqth');

@@ -192,6 +192,12 @@ const receivesHousingAid = (answers: Record<string, string>): boolean => {
 const hasMortgagePayments = (answers: Record<string, string>): boolean =>
   isOwnerStatus(answers) && toComparable(answers['housing-loan-type']) !== 'aucun pret en cours';
 
+const ownsRealEstate = (answers: Record<string, string>): boolean =>
+  isYes(answers['realestate-ownership']);
+
+const hasRentedRealEstate = (answers: Record<string, string>): boolean =>
+  ownsRealEstate(answers) && isYes(answers['realestate-rental-status']);
+
 const CHAT_PLAN_STEPS: ChatStep[] = [
   {
     id: 'section1-intro',
@@ -1199,11 +1205,49 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
       '1-3. Disposez-vous d’une épargne ou de placements financiers ? Indiquez le montant total estimé et la part bloquée/imposable le cas échéant.',
   },
   {
-    id: 'realestate-info',
+    id: 'realestate-ownership',
     section: 'Section 5 – Patrimoine',
-    label: 'Patrimoine immobilier',
+    label: 'Propriété immobilière',
+    prompt: '4. Êtes-vous propriétaire d’un ou plusieurs biens immobiliers ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+  },
+  {
+    id: 'realestate-property-type',
+    section: 'Section 5 – Patrimoine',
+    label: 'Type de bien possédé',
     prompt:
-      '4-7. Êtes-vous propriétaire d’un ou plusieurs biens immobiliers ? Précisez le type de bien (résidence principale, secondaire, locatif, terrain/other), s’il est loué (montant du loyer perçu) et l’existence d’un prêt immobilier en cours.',
+      '5. Quel(s) type(s) de bien possédez-vous ? Sélectionnez l’option qui correspond le mieux (Résidence principale, Résidence secondaire, Bien locatif, Terrain ou autre).',
+    options: [
+      'Résidence principale',
+      'Résidence secondaire',
+      'Bien locatif',
+      'Terrain ou autre bien immobilier',
+    ],
+    shouldAsk: ownsRealEstate,
+  },
+  {
+    id: 'realestate-rental-status',
+    section: 'Section 5 – Patrimoine',
+    label: 'Bien loué',
+    prompt: '6. L’un de vos biens est-il actuellement loué ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: ownsRealEstate,
+  },
+  {
+    id: 'realestate-rent-amount',
+    section: 'Section 5 – Patrimoine',
+    label: 'Montant du loyer perçu',
+    prompt:
+      '6 bis. Indiquez le montant mensuel net du loyer perçu pour ce(s) bien(s). Précisez « Non applicable » si aucun loyer.',
+    shouldAsk: hasRentedRealEstate,
+  },
+  {
+    id: 'realestate-mortgage',
+    section: 'Section 5 – Patrimoine',
+    label: 'Prêt immobilier en cours',
+    prompt: '7. Avez-vous un prêt immobilier en cours pour ce(s) bien(s) ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: ownsRealEstate,
   },
   {
     id: 'capital-info',

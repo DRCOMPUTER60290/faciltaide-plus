@@ -222,11 +222,139 @@ const CHAT_PLAN_STEPS: ChatStep[] = [
     ],
   },
   {
-    id: 'adult1-details',
+    id: 'adult1-contract-type',
     section: 'Section 2 – Situation professionnelle et personnelle',
-    label: 'Détails situation adulte 1',
+    label: 'Type de contrat (adulte 1)',
     prompt:
-      '17-33. Précisez toutes les informations liées à cette situation (type de contrat, temps de travail, dates, allocations chômage et montants, statut d’indépendant, reconnaissance handicap, aides sociales, date de retraite, etc.). Indiquez « Non applicable » si aucune précision.',
+      '17. Quel est votre type de contrat actuel ? (CDI, CDD, Intérim, Fonction publique, Alternance, Autre).',
+    options: [
+      'CDI',
+      'CDD',
+      'Intérim',
+      'Fonction publique',
+      'Alternance / apprentissage',
+      'Travail indépendant',
+      'Autre',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-working-time',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Temps de travail (adulte 1)',
+    prompt:
+      '18. Quel est votre temps de travail ? (Temps plein, Temps partiel, Travail de nuit, Travail saisonnier, Autre).',
+    options: [
+      'Temps plein',
+      'Temps partiel',
+      'Travail de nuit',
+      'Travail posté / en horaires décalés',
+      'Travail saisonnier',
+      'Autre',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-contract-dates',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Dates clés du contrat (adulte 1)',
+    prompt:
+      '19. Disposez-vous de dates importantes à communiquer pour cet emploi ? (Date de début, date de fin, renouvellement, période d’essai).',
+    options: [
+      'Date de début connue',
+      'Date de fin connue',
+      'Renouvellement prévu',
+      'En période d’essai',
+      'Contrat sans date de fin',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-unemployment-benefits',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Allocations chômage (adulte 1)',
+    prompt:
+      '20. Percevez-vous des allocations chômage ? (Oui, en cours d’instruction, Non).',
+    options: [
+      'Oui, indemnisé(e)',
+      'Oui, en cours d’instruction',
+      'Non',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-unemployment-amount',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Montant allocations chômage (adulte 1)',
+    prompt:
+      '21. Quel est le montant mensuel des allocations chômage perçues ? (Fourchettes indicatives).',
+    options: [
+      'Moins de 500 €',
+      '500 € à 1 000 €',
+      '1 001 € à 1 500 €',
+      'Plus de 1 500 €',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-self-employed-status',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Statut d’indépendant (adulte 1)',
+    prompt:
+      '22. Si vous êtes travailleur indépendant ou auto-entrepreneur, quel est votre statut ? (Micro-entreprise, Profession libérale, Artisan / commerçant, Autre).',
+    options: [
+      'Micro-entreprise',
+      'Profession libérale',
+      'Artisan / commerçant',
+      'Agriculteur',
+      'Autre',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-disability-recognition',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Reconnaissance handicap (adulte 1)',
+    prompt:
+      '23. Disposez-vous d’une reconnaissance de handicap ? (RQTH, AAH, Autre, Non).',
+    options: [
+      'Oui, RQTH',
+      'Oui, AAH',
+      'Oui, autre reconnaissance',
+      'Demande en cours',
+      'Non',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-social-aids',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Aides sociales perçues (adulte 1)',
+    prompt:
+      '24. Percevez-vous d’autres aides sociales liées à votre situation professionnelle ? (Prime d’activité, Aides CAF, Aides régionales, Autre).',
+    options: [
+      'Prime d’activité',
+      'Aides CAF',
+      'Aides régionales / départementales',
+      'Aides de l’employeur',
+      'Autre',
+      'Aucune',
+      'Non applicable',
+    ],
+  },
+  {
+    id: 'adult1-retirement-date',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Date de retraite (adulte 1)',
+    prompt:
+      '25. Êtes-vous déjà à la retraite ou avez-vous une date de départ prévue ? (Déjà retraité(e), Départ prévu, Pas encore prévu).',
+    options: [
+      'Déjà retraité(e)',
+      'Départ prévu dans l’année',
+      'Départ prévu au-delà d’un an',
+      'Pas encore prévu',
+      'Non applicable',
+    ],
   },
   {
     id: 'adult2-intent',

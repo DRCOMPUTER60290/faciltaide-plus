@@ -55,6 +55,14 @@ type ChatMessage = {
   text: string;
 };
 
+type ChatStateSnapshot = {
+  messages: ChatMessage[];
+  answers: Record<string, string>;
+  stepIndex: number;
+  isFinished: boolean;
+  lastAnsweredStepId?: string;
+};
+
 const formatPersonName = (value?: string): string | null => {
   if (!value) {
     return null;
@@ -97,10 +105,12 @@ export default function ChatScreen() {
   const [currentChatStep, setCurrentChatStep] = useState(0);
   const [chatInput, setChatInput] = useState('');
   const [multiSelectSelections, setMultiSelectSelections] = useState<string[]>([]);
+  const [multiSelectRestore, setMultiSelectRestore] = useState<string[] | null>(null);
   const [chatError, setChatError] = useState<string | null>(null);
   const [isChatFinished, setIsChatFinished] = useState(false);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
   const [pendingBirthDate, setPendingBirthDate] = useState<Date | null>(null);
+  const [chatStateHistory, setChatStateHistory] = useState<ChatStateSnapshot[]>([]);
 
   const chatScrollRef = useRef<ScrollView | null>(null);
 
@@ -164,9 +174,20 @@ export default function ChatScreen() {
       return;
     }
 
+    if (multiSelectRestore) {
+      setMultiSelectSelections(multiSelectRestore);
+      setMultiSelectRestore(null);
+      return;
+    }
+
     const existingAnswer = guidedAnswers[activeChatStep.id];
     setMultiSelectSelections(parseMultiSelectAnswer(existingAnswer));
-  }, [activeChatStep, guidedAnswers, parseMultiSelectAnswer]);
+  }, [
+    activeChatStep,
+    guidedAnswers,
+    multiSelectRestore,
+    parseMultiSelectAnswer,
+  ]);
 
   const toggleMultiSelectOption = useCallback(
     (label: string) => {
@@ -465,6 +486,8 @@ export default function ChatScreen() {
     setGuidedAnswers({});
     setPostalCodeCities([]);
     setLastPostalCodeLookup('');
+    setChatStateHistory([]);
+    setMultiSelectRestore(null);
   }, []);
 
   const startChat = useCallback(() => {
@@ -489,6 +512,14 @@ export default function ChatScreen() {
     setChatInput('');
     setChatError(null);
     setIsChatFinished(finished);
+    setChatStateHistory([
+      {
+        messages,
+        answers: {},
+        stepIndex: nextIndex,
+        isFinished: finished,
+      },
+    ]);
   }, [appendNextPrompts, chatSteps.length, resetChatAnswers]);
 
   useEffect(() => {
@@ -704,6 +735,16 @@ export default function ChatScreen() {
       setCurrentChatStep(nextIndex);
       setChatInput('');
       setIsChatFinished(finished);
+      setChatStateHistory((previousHistory) => [
+        ...previousHistory,
+        {
+          messages: finalMessages,
+          answers: answersWithCurrent,
+          stepIndex: nextIndex,
+          isFinished: finished,
+          lastAnsweredStepId: step.id,
+        },
+      ]);
 
       if (step.id === 'housing-postal-code') {
         void fetchCitiesForPostalCode(normalizedAnswer);
@@ -718,12 +759,54 @@ export default function ChatScreen() {
       formatBirthDate,
       guidedAnswers,
       isChatFinished,
+      setChatStateHistory,
       fetchCitiesForPostalCode,
       maximumBirthDate,
       minimumBirthDate,
       parseBirthDateInput,
     ],
   );
+
+  const handleChatGoBack = useCallback(() => {
+    if (chatStateHistory.length <= 1) {
+      return;
+    }
+
+    const newHistory = chatStateHistory.slice(0, -1);
+    const lastSnapshot = chatStateHistory[chatStateHistory.length - 1];
+    const previousSnapshot = newHistory[newHistory.length - 1];
+
+    setChatStateHistory(newHistory);
+    setChatMessages(previousSnapshot.messages);
+    setGuidedAnswers(previousSnapshot.answers);
+    setCurrentChatStep(previousSnapshot.stepIndex);
+    setIsChatFinished(previousSnapshot.isFinished);
+    setChatError(null);
+    setIsDatePickerVisible(false);
+    setPendingBirthDate(null);
+
+    const lastStepId = lastSnapshot.lastAnsweredStepId;
+    const lastAnswerValue = lastStepId ? lastSnapshot.answers[lastStepId] ?? '' : '';
+    const targetStep = chatSteps[previousSnapshot.stepIndex];
+
+    if (!targetStep) {
+      setChatInput('');
+      setMultiSelectRestore(null);
+      return;
+    }
+
+    if (targetStep.multiSelectOptions?.length) {
+      setChatInput('');
+      setMultiSelectRestore(parseMultiSelectAnswer(lastAnswerValue));
+    } else {
+      setMultiSelectRestore(null);
+      setChatInput(lastAnswerValue);
+    }
+  }, [
+    chatStateHistory,
+    chatSteps,
+    parseMultiSelectAnswer,
+  ]);
 
   const handleMultiSelectSubmit = useCallback(() => {
     if (isChatFinished) {
@@ -1110,11 +1193,28 @@ export default function ChatScreen() {
                   {chatError && <Text style={styles.chatError}>{chatError}</Text>}
 
                   <View style={styles.chatActions}>
-                    <TouchableOpacity
-                      style={styles.chatActionButton}
-                      onPress={handleChatRestart}>
-                      <Text style={styles.chatActionButtonText}>Relancer le chatbot</Text>
-                    </TouchableOpacity>
+                    <View style={styles.chatSecondaryActions}>
+                      <TouchableOpacity
+                        style={[
+                          styles.chatActionButton,
+                          chatStateHistory.length <= 1 && styles.chatActionButtonDisabled,
+                        ]}
+                        onPress={handleChatGoBack}
+                        disabled={chatStateHistory.length <= 1}>
+                        <Text
+                          style={[
+                            styles.chatActionButtonText,
+                            chatStateHistory.length <= 1 && styles.chatActionButtonDisabledText,
+                          ]}>
+                          Question précédente
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.chatActionButton}
+                        onPress={handleChatRestart}>
+                        <Text style={styles.chatActionButtonText}>Relancer le chatbot</Text>
+                      </TouchableOpacity>
+                    </View>
                     <TouchableOpacity
                       style={[
                         styles.chatActionButtonPrimary,
@@ -1553,9 +1653,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   chatActions: {
+    marginTop: 12,
+    gap: 8,
+  },
+  chatSecondaryActions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
   },
   chatActionButton: {
     flex: 1,
@@ -1566,16 +1669,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#fff',
   },
+  chatActionButtonDisabled: {
+    backgroundColor: '#f0f4f8',
+    borderColor: '#e0e6ed',
+  },
   chatActionButtonText: {
     color: '#2c3e50',
     fontWeight: '600',
   },
+  chatActionButtonDisabledText: {
+    color: '#94a3b8',
+  },
   chatActionButtonPrimary: {
-    flex: 1,
     borderRadius: 10,
     paddingVertical: 12,
     alignItems: 'center',
     backgroundColor: '#4ba3c3',
+    alignSelf: 'stretch',
   },
   chatActionButtonPrimaryDisabled: {
     backgroundColor: '#aacfe0',

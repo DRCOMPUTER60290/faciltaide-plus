@@ -208,14 +208,44 @@ export default function ChatScreen() {
   );
 
   const getStepPrompt = useCallback(
-    (step: ChatStep, answers: Record<string, string>): string =>
-      replaceAdultPlaceholders(step.prompt, answers),
+    (step: ChatStep, answers: Record<string, string>): string => {
+      let prompt = step.prompt;
+
+      if (step.id === 'adult1-journalist-months') {
+        const role = answers['adult1-journalist-role'];
+        if (role) {
+          prompt = `Nombre de mois où vous avez été ${role.toLowerCase()} depuis septembre 2024.`;
+        }
+      } else if (step.id === 'adult2-journalist-months') {
+        const role = answers['adult2-journalist-role'];
+        if (role) {
+          prompt = `Nombre de mois où votre conjoint(e) a été ${role.toLowerCase()} depuis septembre 2024.`;
+        }
+      }
+
+      return replaceAdultPlaceholders(prompt, answers);
+    },
     [replaceAdultPlaceholders],
   );
 
   const getStepLabel = useCallback(
-    (step: ChatStep, answers: Record<string, string>): string =>
-      replaceAdultPlaceholders(step.label ?? step.prompt, answers),
+    (step: ChatStep, answers: Record<string, string>): string => {
+      let label = step.label ?? step.prompt;
+
+      if (step.id === 'adult1-journalist-months') {
+        const role = answers['adult1-journalist-role'];
+        if (role) {
+          label = `Nombre de mois où vous avez été ${role.toLowerCase()} depuis septembre 2024`;
+        }
+      } else if (step.id === 'adult2-journalist-months') {
+        const role = answers['adult2-journalist-role'];
+        if (role) {
+          label = `Nombre de mois où votre conjoint(e) a été ${role.toLowerCase()} depuis septembre 2024`;
+        }
+      }
+
+      return replaceAdultPlaceholders(label, answers);
+    },
     [replaceAdultPlaceholders],
   );
 

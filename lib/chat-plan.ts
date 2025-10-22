@@ -412,6 +412,8 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
       },
       { label: 'En reprise d’activité', group: 'Activité professionnelle' },
       { label: 'En congé parental', group: 'Situation familiale' },
+      { label: 'Demandeur d’emploi', group: 'Accompagnement vers l’emploi' },
+      { label: 'En CER ou en PPAE', group: 'Accompagnement vers l’emploi' },
       {
         label: 'Journaliste, assistant maternel ou familial',
         group: 'Professions spécifiques',

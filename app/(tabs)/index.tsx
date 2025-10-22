@@ -947,7 +947,7 @@ export default function ChatScreen() {
         params: { results: serializedResults },
       });
     } catch (err: unknown) {
-      console.error('Error during simulation:', err);
+      console.warn('Error during simulation:', err);
 
       if (isAbortError(err)) {
         setError('La requête a pris trop de temps. Veuillez réessayer.');

@@ -71,6 +71,10 @@
 
 #### Si « Oui » → boucle enfant
 
+> Chatbot : 🔢 Combien d’enfants ou personnes à charge vivent avec vous ?
+>
+> **Stockage →** `familles.enfants_nombre`
+
 > Chatbot : 🧒 Très bien, indiquons les informations du premier enfant.
 
 Pour chaque enfant :

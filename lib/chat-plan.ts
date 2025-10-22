@@ -323,6 +323,13 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     options: ['Oui', 'Non'],
   },
   {
+    id: 'dependents-count',
+    section: 'Section 1 – Composition du foyer',
+    label: "Nombre d'enfants / personnes à charge",
+    prompt: '9 bis. Combien d’enfants ou de personnes à charge vivent avec vous ? Indiquez le nombre.',
+    shouldAsk: hasDependents,
+  },
+  {
     id: 'dependents-names',
     section: 'Section 1 – Composition du foyer',
     label: 'Prénoms des enfants / personnes à charge',

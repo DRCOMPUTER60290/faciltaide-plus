@@ -501,7 +501,7 @@ export default function ChatScreen() {
         id: 'bot-intro',
         role: 'bot',
         text:
-          'Bonjour ! Je vais vous poser une série de questions structurées pour constituer la trame complète de votre simulation.',
+          'Bonjour ! Nous allons parcourir ensemble votre profil, votre foyer, votre logement, vos revenus et vos projets afin de préparer la simulation la plus complète possible.',
       },
     ];
 

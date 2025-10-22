@@ -27,6 +27,12 @@ import {
   type ChatMultiSelectOption,
   type ChatStep,
 } from '@/lib/chat-plan';
+import {
+  calculateAge,
+  formatAnswerWithCalculatedAge,
+  formatBirthDateString,
+  parseBirthDateString,
+} from '@/lib/age';
 import { buildSimulationPayload, extractRawJson } from '@/lib/simulation';
 import type { ApiSimulationResponse } from '@/lib/simulation';
 import {
@@ -47,17 +53,6 @@ type ChatMessage = {
   id: string;
   role: 'bot' | 'user';
   text: string;
-};
-
-const calculateAge = (birthDate: Date, referenceDate: Date = new Date()): number => {
-  let age = referenceDate.getFullYear() - birthDate.getFullYear();
-  const monthDifference = referenceDate.getMonth() - birthDate.getMonth();
-
-  if (monthDifference < 0 || (monthDifference === 0 && referenceDate.getDate() < birthDate.getDate())) {
-    age -= 1;
-  }
-
-  return age < 0 ? 0 : age;
 };
 
 const formatPersonName = (value?: string): string | null => {
@@ -253,35 +248,9 @@ export default function ChatScreen() {
     return activeChatStep.id.includes('birth-date') || normalizedText.includes('date de naissance');
   }, [activeChatStep]);
 
-  const parseBirthDateInput = useCallback((value: string): Date | null => {
-    const trimmed = value.trim();
-    const match = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (!match) {
-      return null;
-    }
+  const parseBirthDateInput = useCallback((value: string): Date | null => parseBirthDateString(value), []);
 
-    const day = Number.parseInt(match[1], 10);
-    const month = Number.parseInt(match[2], 10) - 1;
-    const year = Number.parseInt(match[3], 10);
-
-    const candidate = new Date(year, month, day);
-    if (
-      candidate.getFullYear() !== year ||
-      candidate.getMonth() !== month ||
-      candidate.getDate() !== day
-    ) {
-      return null;
-    }
-
-    return candidate;
-  }, []);
-
-  const formatBirthDate = useCallback((date: Date): string => {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-  }, []);
+  const formatBirthDate = useCallback((date: Date): string => formatBirthDateString(date), []);
 
   const handleBirthDateSelected = useCallback(
     (date: Date) => {
@@ -595,7 +564,10 @@ export default function ChatScreen() {
 
       const label = getStepLabel(step, guidedAnswers);
       const lines = sectionLines.get(step.section) ?? [];
-      lines.push(`${label}: ${answer.trim()}`);
+
+      const formattedAnswer = formatAnswerWithCalculatedAge(step.id, answer, new Date());
+
+      lines.push(`${label}: ${formattedAnswer}`);
       sectionLines.set(step.section, lines);
     });
 

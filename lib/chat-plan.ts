@@ -72,6 +72,9 @@ export const wantsAdult2Details = (answers: Record<string, string>): boolean =>
 
 export const hasDependents = (answers: Record<string, string>): boolean => isYes(answers['dependents-any']);
 
+const hasDisabledDependents = (answers: Record<string, string>): boolean =>
+  hasDependents(answers) && isYes(answers['dependents-disability']);
+
 export const isAdult1Independent = (answers: Record<string, string>): boolean =>
   includesMultiSelectValue(
     getAdult1SituationsAnswer(answers),
@@ -420,6 +423,39 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     shouldAsk: hasDependents,
   },
   {
+    id: 'dependents-disability',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Enfants en situation de handicap',
+    prompt:
+      '14 bis. Certains de vos enfants ou personnes à charge sont-ils en situation de handicap reconnue ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: hasDependents,
+  },
+  {
+    id: 'dependents-disability-rate',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Taux d’incapacité des enfants',
+    prompt:
+      '14 ter. Pour chaque enfant en situation de handicap, indiquez le taux d’incapacité reconnu (Moins de 50 %, Entre 50 % et 80 %, Plus de 80 %). Mentionnez le prénom et le taux pour chacun ou « Non applicable » si aucun.',
+    shouldAsk: hasDisabledDependents,
+  },
+  {
+    id: 'dependents-disability-restriction',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Restriction substantielle d’accès à l’emploi',
+    prompt:
+      '14 quater. Pour chacun des enfants concernés, précisez si une restriction substantielle et durable d’accès à l’emploi est reconnue par la CDAPH (Oui / Non). Indiquez le prénom et la réponse, ou « Non applicable » si aucun enfant n’est concerné.',
+    shouldAsk: hasDisabledDependents,
+  },
+  {
+    id: 'dependents-disability-placement',
+    section: 'Section 1 – Composition du foyer',
+    label: 'Placement spécialisé ou famille d’accueil',
+    prompt:
+      '14 quinquies. Un placement en structure spécialisée ou en famille d’accueil est-il prévu pour l’un de ces enfants ? Indiquez le prénom et répondez Oui / Non pour chacun, ou « Non applicable » si aucun.',
+    shouldAsk: hasDisabledDependents,
+  },
+  {
     id: 'dependents-additional-info',
     section: 'Section 1 – Composition du foyer',
     label: 'Informations complémentaires',
@@ -511,7 +547,24 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Demandeur d’emploi – précisions',
     prompt:
-      'Date de fin de votre dernier contrat de travail (jj/mm/aaaa). Si vous n’avez jamais eu de contrat de travail, laissez ce champ vide.\nDate de début d’indemnisation chômage (jj/mm/aaaa). Si vous ne percevez pas d’allocation chômage, laissez ce champ vide.',
+      'Date de fin de votre dernier contrat de travail (jj/mm/aaaa). Si vous n’avez jamais eu de contrat de travail, laissez ce champ vide.',
+    shouldAsk: isAdult1JobSeeker,
+  },
+  {
+    id: 'adult1-jobseeker-seniority',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Expérience professionnelle (adulte 1)',
+    prompt:
+      'Avez-vous travaillé au moins 5 ans entre décembre 2013 et décembre 2023 ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: isAdult1JobSeeker,
+  },
+  {
+    id: 'adult1-jobseeker-unemployment-date',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Début d’indemnisation chômage (adulte 1)',
+    prompt:
+      'Date de début d’indemnisation chômage (jj/mm/aaaa). Si vous ne percevez pas d’allocation chômage, laissez ce champ vide.',
     shouldAsk: isAdult1JobSeeker,
   },
   {
@@ -753,7 +806,24 @@ export const CHAT_PLAN_STEPS: ChatStep[] = [
     section: 'Section 2 – Situation professionnelle et personnelle',
     label: 'Demandeur d’emploi – précisions (conjoint)',
     prompt:
-      'Date de fin du dernier contrat de travail (jj/mm/aaaa). Si votre conjoint(e) n’a jamais eu de contrat de travail, laissez ce champ vide.\nDate de début d’indemnisation chômage (jj/mm/aaaa). Si aucune allocation chômage n’est perçue, laissez ce champ vide.',
+      'Date de fin du dernier contrat de travail (jj/mm/aaaa). Si votre conjoint(e) n’a jamais eu de contrat de travail, laissez ce champ vide.',
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JobSeeker(answers),
+  },
+  {
+    id: 'adult2-jobseeker-seniority',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Expérience professionnelle (conjoint)',
+    prompt:
+      'Votre conjoint(e) a-t-il(elle) travaillé au moins 5 ans entre décembre 2013 et décembre 2023 ? (Oui / Non)',
+    options: ['Oui', 'Non'],
+    shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JobSeeker(answers),
+  },
+  {
+    id: 'adult2-jobseeker-unemployment-date',
+    section: 'Section 2 – Situation professionnelle et personnelle',
+    label: 'Début d’indemnisation chômage (conjoint)',
+    prompt:
+      'Date de début d’indemnisation chômage (jj/mm/aaaa). Si aucune allocation chômage n’est perçue, laissez ce champ vide.',
     shouldAsk: (answers) => wantsAdult2Details(answers) && isAdult2JobSeeker(answers),
   },
   {
